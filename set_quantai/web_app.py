@@ -24,55 +24,6 @@ from set_quantai.core.auto_trader import AutoTraderEngine
 web_app = FastAPI(title="SET-QuantAI Streaming Terminal", description="หน้าจอเทรดและวิเคราะห์หุ้นไทยสไตล์ Settrade Streaming")
 pipeline = QuantAIPipeline()
 
-
-@web_app.get("/api/top5-recommendations")
-def get_top5_recommendations():
-    return TopPicksEngine.get_top5_recommendations(pipeline)
-
-
-@web_app.post("/api/auto-trade/buy-top5")
-def auto_trade_buy_top5():
-    res = AutoTraderEngine.execute_top5_purchases(pipeline, shares_per_stock=1000)
-    for o in res.get("orders", []):
-        orders_history.insert(0, {
-            "order_id": o["order_id"],
-            "time": datetime.now().strftime("%H:%M:%S"),
-            "symbol": o["symbol"],
-            "side": "BUY",
-            "volume": o["shares"],
-            "price": o["buy_price"],
-            "trade_value": o["initial_value"],
-            "status": "Matched",
-        })
-    return res
-
-
-@web_app.post("/api/auto-trade/simulate-exits")
-def auto_trade_simulate_exits():
-    res = AutoTraderEngine.simulate_target_exits(pipeline)
-    for t in res.get("closed_trades", []):
-        orders_history.insert(0, {
-            "order_id": f"SELL-TARGET-{t['symbol']}-{int(datetime.now().timestamp())}",
-            "time": datetime.now().strftime("%H:%M:%S"),
-            "symbol": t["symbol"],
-            "side": "SELL",
-            "volume": t["shares"],
-            "price": t["exit_price"],
-            "trade_value": t["exit_price"] * t["shares"],
-            "status": "Matched",
-        })
-    return res
-
-
-@web_app.post("/api/auto-trade/reset")
-def auto_trade_reset():
-    return AutoTraderEngine.reset_data()
-
-
-@web_app.get("/api/auto-trade/performance")
-def auto_trade_performance():
-    return AutoTraderEngine.get_performance_summary(pipeline)
-
 # In-memory orders history for Sandbox execution
 orders_history: List[Dict[str, Any]] = [
     {
@@ -126,6 +77,55 @@ orders_history: List[Dict[str, Any]] = [
         "status": "Matched",
     },
 ]
+
+
+@web_app.get("/api/top5-recommendations")
+def get_top5_recommendations():
+    return TopPicksEngine.get_top5_recommendations(pipeline)
+
+
+@web_app.post("/api/auto-trade/buy-top5")
+def auto_trade_buy_top5():
+    res = AutoTraderEngine.execute_top5_purchases(pipeline, shares_per_stock=1000)
+    for o in res.get("orders", []):
+        orders_history.insert(0, {
+            "order_id": o["order_id"],
+            "time": datetime.now().strftime("%H:%M:%S"),
+            "symbol": o["symbol"],
+            "side": "BUY",
+            "volume": o["shares"],
+            "price": o["buy_price"],
+            "trade_value": o["initial_value"],
+            "status": "Matched",
+        })
+    return res
+
+
+@web_app.post("/api/auto-trade/simulate-exits")
+def auto_trade_simulate_exits():
+    res = AutoTraderEngine.simulate_target_exits(pipeline)
+    for t in res.get("closed_trades", []):
+        orders_history.insert(0, {
+            "order_id": f"SELL-TARGET-{t['symbol']}-{int(datetime.now().timestamp())}",
+            "time": datetime.now().strftime("%H:%M:%S"),
+            "symbol": t["symbol"],
+            "side": "SELL",
+            "volume": t["shares"],
+            "price": t["exit_price"],
+            "trade_value": t["exit_price"] * t["shares"],
+            "status": "Matched",
+        })
+    return res
+
+
+@web_app.post("/api/auto-trade/reset")
+def auto_trade_reset():
+    return AutoTraderEngine.reset_data()
+
+
+@web_app.get("/api/auto-trade/performance")
+def auto_trade_performance():
+    return AutoTraderEngine.get_performance_summary(pipeline)
 
 
 class AddWatchlistRequest(BaseModel):
