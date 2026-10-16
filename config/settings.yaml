@@ -1,0 +1,29 @@
+app_name: "SET-QuantAI"
+environment: "production"
+
+database:
+  host: "localhost"
+  port: 5433
+  user: "postgres"
+  password: "quant_password"
+  dbname: "set_quantai"
+
+redis:
+  host: "localhost"
+  port: 6380
+  password: ""
+
+risk:
+  max_risk_per_trade_percent: 1.5
+  min_reward_risk_ratio: 2.0
+  daily_drawdown_limit_percent: 3.0
+  atr_multiplier: 2.0
+  default_capital: 1000000.0
+
+settrade_app_id: "SANDBOX_APP_ID"
+settrade_app_secret: "SANDBOX_APP_SECRET"
+settrade_broker_id: "SANDBOX"
+settrade_app_code: "SANDBOX"
+settrade_account_no: "Kequiv-E"
+settrade_pin: "000000"
+sec_api_key: "DEMO_SEC_API_KEY"

@@ -1,0 +1,63 @@
+name: พอร์ตโฟกัสหลัก (Primary Focus Watchlist)
+description: หุ้นขนาดใหญ่และหุ้นเติบโตที่น่าจับตามองในตลาดหลักทรัพย์แห่งประเทศไทย
+  (SET)
+items:
+- symbol: CPALL
+  notes: ผู้นำค้าปลีก 7-Eleven พื้นฐานแกร่ง กระแสเงินสดสม่ำเสมอ จับตาจังหวะย่อซื้อแนวรับ
+  priority: 1
+  target_price: 68.5
+  alert_on_signal: true
+  added_at: '2026-10-15T22:39:14.724784'
+  tags:
+  - SET50
+  - COMMERCE
+  - CASH_COW
+- symbol: PTT
+  notes: หุ้นพลังงานขนาดใหญ่ ปันผลสูง เฝ้ารอบ Wyckoff Accumulation
+  priority: 2
+  target_price: 36.0
+  alert_on_signal: true
+  added_at: '2026-10-15T22:39:14.724793'
+  tags:
+  - SET50
+  - ENERGY
+  - HIGH_DIVIDEND
+- symbol: BDMS
+  notes: เครือโรงพยาบาลเอกชนอันดับหนึ่ง รายได้เติบโตจากผู้ป่วยต่างชาติ
+  priority: 1
+  target_price: 32.0
+  alert_on_signal: true
+  added_at: '2026-10-15T22:39:14.724796'
+  tags:
+  - SET50
+  - HEALTHCARE
+  - DEFENSIVE
+- symbol: DELTA
+  notes: ชิ้นส่วนอิเล็กทรอนิกส์และเทคโนโลยี AI เฝ้าระวังความผันผวนสูงและ VCP Breakout
+  priority: 3
+  target_price: 165.0
+  alert_on_signal: true
+  added_at: '2026-10-15T22:39:14.724804'
+  tags:
+  - SET100
+  - TECH
+  - MOMENTUM
+- symbol: ADVANC
+  notes: ผู้นำโทรคมนาคม กระแสเงินสดเสถียร อัตรากำไรสม่ำเสมอ
+  priority: 2
+  target_price: 285.0
+  alert_on_signal: true
+  added_at: '2026-10-15T22:39:14.724807'
+  tags:
+  - SET50
+  - ICT
+  - VALUE
+- symbol: GULF
+  notes: พลังงานสะอาดและโครงสร้างพื้นฐานดิจิทัล
+  priority: 1
+  target_price: 50.0
+  alert_on_signal: true
+  added_at: '2026-10-15T22:39:14.724827'
+  tags:
+  - ENERGY
+  - SET50
