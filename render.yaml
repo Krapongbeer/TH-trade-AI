@@ -2,8 +2,8 @@ services:
   - type: web
     name: set-quantai
     runtime: python
-    buildCommand: "pip install -r requirements.txt && pip install -e ."
-    startCommand: "uvicorn set_quantai.web_app:web_app --host 0.0.0.0 --port $PORT"
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "PYTHONPATH=. uvicorn set_quantai.web_app:web_app --host 0.0.0.0 --port $PORT"
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9
