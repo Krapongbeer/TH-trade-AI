@@ -9,14 +9,9 @@ if str(root_dir) not in sys.path:
 
 from app import web_app
 
-# Convert ASGI app to WSGI for standard Gunicorn runners
-try:
-    from a2wsgi import ASGIMiddleware
-    application = ASGIMiddleware(web_app)
-except Exception:
-    application = web_app
-
-app = application
+# Expose web_app directly as ASGI application
+app = web_app
+application = web_app
 
 if __name__ == "__main__":
     import uvicorn
