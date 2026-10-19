@@ -9,6 +9,10 @@ if str(root_dir) not in sys.path:
 
 from set_quantai.web_app import web_app
 
+# Expose aliases for various WSGI/ASGI runners
+app = web_app
+application = web_app
+
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8555))

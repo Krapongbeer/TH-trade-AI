@@ -79,6 +79,12 @@ orders_history: List[Dict[str, Any]] = [
 ]
 
 
+@web_app.get("/health")
+@web_app.get("/healthz")
+def healthcheck():
+    return {"status": "ok"}
+
+
 @web_app.get("/api/top5-recommendations")
 def get_top5_recommendations():
     return TopPicksEngine.get_top5_recommendations(pipeline)
