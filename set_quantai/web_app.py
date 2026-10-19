@@ -351,8 +351,9 @@ def index_html():
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SET-QuantAI: หน้าจอเทรดสไตล์ Settrade Streaming</title>
+    <title>SET-QuantAI: หน้าจอวิเคราะห์ & เทรดหุ้นไทย</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Prompt', sans-serif; }
@@ -394,26 +395,29 @@ def index_html():
             </div>
         </div>
 
-        <!-- Main Navigation Bar (แท็บเมนูหลักสไตล์ Streaming) -->
+        <!-- Main Navigation Bar (แท็บเมนูหลักสไตล์ Streaming & Easy Analyzer) -->
         <div class="max-w-7xl mx-auto px-4 flex items-center justify-between">
-            <nav class="flex space-x-1 py-1">
-                <button onclick="switchTab('watchlist')" id="tab-watchlist" class="px-4 py-2.5 font-bold rounded-t-lg transition flex items-center space-x-2 border-b-2 border-blue-500 text-blue-400 bg-stream-dark">
-                    <span>⭐</span> <span>Watchlist (หุ้นที่สนใจ)</span>
+            <nav class="flex space-x-1 py-1 overflow-x-auto">
+                <button onclick="switchTab('analyzer')" id="tab-analyzer" class="px-4 py-2.5 font-bold rounded-t-lg transition flex items-center space-x-2 border-b-2 border-blue-500 text-blue-400 bg-stream-dark whitespace-nowrap">
+                    <span>🔍</span> <span>วิเคราะห์หุ้น & ดูกราฟ (Easy Analyzer)</span>
                 </button>
-                <button onclick="switchTab('quote')" id="tab-quote" class="px-4 py-2.5 font-medium rounded-t-lg transition flex items-center space-x-2 border-b-2 border-transparent text-slate-400 hover:text-white">
-                    <span>📊</span> <span>Quote & AI Analysis (ดูหุ้น & วิเคราะห์)</span>
+                <button onclick="switchTab('top5')" id="tab-top5" class="px-4 py-2.5 font-medium rounded-t-lg transition flex items-center space-x-2 border-b-2 border-transparent text-slate-400 hover:text-white whitespace-nowrap">
+                    <span>🎯</span> <span>Top 5 หุ้น AI แนะนำ</span>
                 </button>
-                <button onclick="switchTab('top5')" id="tab-top5" class="px-4 py-2.5 font-medium rounded-t-lg transition flex items-center space-x-2 border-b-2 border-transparent text-slate-400 hover:text-white">
-                    <span>🎯</span> <span>Top 5 หุ้นแนะนำ (AI Picks)</span>
+                <button onclick="switchTab('portfolio')" id="tab-portfolio" class="px-4 py-2.5 font-medium rounded-t-lg transition flex items-center space-x-2 border-b-2 border-transparent text-slate-400 hover:text-white whitespace-nowrap">
+                    <span>💼</span> <span>พอร์ต & คำสั่งซื้อขาย (Portfolio)</span>
                 </button>
-                <button onclick="switchTab('order')" id="tab-order" class="px-4 py-2.5 font-medium rounded-t-lg transition flex items-center space-x-2 border-b-2 border-transparent text-slate-400 hover:text-white">
-                    <span>⚡</span> <span>Buy / Sell (ส่งคำสั่งซื้อขาย)</span>
+                <button onclick="switchTab('order')" id="tab-order" class="px-4 py-2.5 font-medium rounded-t-lg transition flex items-center space-x-2 border-b-2 border-transparent text-slate-400 hover:text-white whitespace-nowrap">
+                    <span>⚡</span> <span>ส่งคำสั่งซื้อขาย (Order Pad)</span>
                 </button>
-                <button onclick="switchTab('portfolio')" id="tab-portfolio" class="px-4 py-2.5 font-medium rounded-t-lg transition flex items-center space-x-2 border-b-2 border-transparent text-slate-400 hover:text-white">
-                    <span>💼</span> <span>Portfolio & Orders (พอร์ตหุ้นคงเหลือ & คำสั่ง)</span>
+                <button onclick="switchTab('watchlist')" id="tab-watchlist" class="px-4 py-2.5 font-medium rounded-t-lg transition flex items-center space-x-2 border-b-2 border-transparent text-slate-400 hover:text-white whitespace-nowrap">
+                    <span>⭐</span> <span>Watchlist (กระดานหุ้น)</span>
                 </button>
-                <button onclick="switchTab('accuracy')" id="tab-accuracy" class="px-4 py-2.5 font-medium rounded-t-lg transition flex items-center space-x-2 border-b-2 border-transparent text-slate-400 hover:text-white">
-                    <span>🏆</span> <span>ทดสอบความแม่นยำ 1,000 หุ้น (Accuracy Dashboard)</span>
+                <button onclick="switchTab('quote')" id="tab-quote" class="px-4 py-2.5 font-medium rounded-t-lg transition flex items-center space-x-2 border-b-2 border-transparent text-slate-400 hover:text-white whitespace-nowrap">
+                    <span>📊</span> <span>Bid/Offer 5 ช่อง (Depth)</span>
+                </button>
+                <button onclick="switchTab('accuracy')" id="tab-accuracy" class="px-4 py-2.5 font-medium rounded-t-lg transition flex items-center space-x-2 border-b-2 border-transparent text-slate-400 hover:text-white whitespace-nowrap">
+                    <span>🏆</span> <span>ทดสอบความแม่นยำ</span>
                 </button>
             </nav>
 
@@ -430,10 +434,257 @@ def index_html():
     <!-- Main Content Area -->
     <main class="max-w-7xl mx-auto px-4 py-6 flex-1 w-full">
 
+        <!-- ======================================================== -->
+        <!-- TAB 0: EASY ANALYZER & CHART (วิเคราะห์หุ้นรายตัว + กราฟ) -->
+        <!-- ======================================================== -->
+        <section id="view-analyzer" class="space-y-6">
+            <!-- Search & Quick Selection Banner -->
+            <div class="bg-gradient-to-r from-blue-950/60 via-slate-900 to-stream-panel p-6 rounded-2xl border border-blue-500/30 shadow-2xl space-y-4">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-xl md:text-2xl font-black text-white flex items-center space-x-2">
+                            <span>🔍</span> <span>ระบบวิเคราะห์หุ้นอัจฉริยะ (AI Stock Analyzer)</span>
+                        </h2>
+                        <p class="text-xs md:text-sm text-slate-300 mt-1">
+                            ใส่ชื่อย่อหุ้นไทยเพื่อรับบทวิเคราะห์แบบ "ฟันธง", ราคาซื้อที่แนะนำ, จุดตัดขาดทุน, เป้าทำกำไร และดูกราฟเทคนิค TradingView ในที่เดียว
+                        </p>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="text-xs text-emerald-400 bg-emerald-500/10 px-3 py-1.5 rounded-full border border-emerald-500/30 font-semibold flex items-center space-x-1.5">
+                            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                            <span>AI วิเคราะห์สดแบบ Real-time</span>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Big Search Box -->
+                <div class="flex flex-col sm:flex-row items-stretch gap-2 pt-2">
+                    <div class="relative flex-1">
+                        <span class="absolute left-4 top-3.5 text-slate-400 text-base">🔍</span>
+                        <input id="easySymbolInput" type="text" placeholder="พิมพ์ชื่อย่อหุ้น เช่น CPALL, PTT, DELTA, BDMS, KBANK..." value="CPALL" class="w-full bg-slate-950 border-2 border-slate-700 hover:border-blue-400 focus:border-blue-500 text-white rounded-xl pl-11 pr-4 py-3 text-base md:text-lg font-bold uppercase tracking-wider focus:outline-none transition shadow-inner" onkeyup="if(event.key==='Enter') analyzeStock()">
+                    </div>
+                    <button onclick="analyzeStock()" class="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-xl text-base transition shadow-lg shadow-blue-600/30 flex items-center justify-center space-x-2">
+                        <span>🚀</span> <span>วิเคราะห์ทันที</span>
+                    </button>
+                </div>
+
+                <!-- Quick Stock Buttons -->
+                <div class="flex flex-wrap items-center gap-2 pt-1 text-xs">
+                    <span class="text-slate-400 font-semibold mr-1">หุ้นยอดนิยม:</span>
+                    <button onclick="analyzeStock('CPALL')" class="px-3 py-1 bg-slate-800 hover:bg-blue-600/30 hover:border-blue-500 text-slate-200 hover:text-white rounded-lg border border-slate-700 font-mono font-bold transition">CPALL</button>
+                    <button onclick="analyzeStock('PTT')" class="px-3 py-1 bg-slate-800 hover:bg-blue-600/30 hover:border-blue-500 text-slate-200 hover:text-white rounded-lg border border-slate-700 font-mono font-bold transition">PTT</button>
+                    <button onclick="analyzeStock('DELTA')" class="px-3 py-1 bg-slate-800 hover:bg-blue-600/30 hover:border-blue-500 text-slate-200 hover:text-white rounded-lg border border-slate-700 font-mono font-bold transition">DELTA</button>
+                    <button onclick="analyzeStock('KBANK')" class="px-3 py-1 bg-slate-800 hover:bg-blue-600/30 hover:border-blue-500 text-slate-200 hover:text-white rounded-lg border border-slate-700 font-mono font-bold transition">KBANK</button>
+                    <button onclick="analyzeStock('ADVANC')" class="px-3 py-1 bg-slate-800 hover:bg-blue-600/30 hover:border-blue-500 text-slate-200 hover:text-white rounded-lg border border-slate-700 font-mono font-bold transition">ADVANC</button>
+                    <button onclick="analyzeStock('BDMS')" class="px-3 py-1 bg-slate-800 hover:bg-blue-600/30 hover:border-blue-500 text-slate-200 hover:text-white rounded-lg border border-slate-700 font-mono font-bold transition">BDMS</button>
+                    <button onclick="analyzeStock('AOT')" class="px-3 py-1 bg-slate-800 hover:bg-blue-600/30 hover:border-blue-500 text-slate-200 hover:text-white rounded-lg border border-slate-700 font-mono font-bold transition">AOT</button>
+                    <button onclick="analyzeStock('GULF')" class="px-3 py-1 bg-slate-800 hover:bg-blue-600/30 hover:border-blue-500 text-slate-200 hover:text-white rounded-lg border border-slate-700 font-mono font-bold transition">GULF</button>
+                    <button onclick="analyzeStock('SCB')" class="px-3 py-1 bg-slate-800 hover:bg-blue-600/30 hover:border-blue-500 text-slate-200 hover:text-white rounded-lg border border-slate-700 font-mono font-bold transition">SCB</button>
+                    <button onclick="analyzeStock('TRUE')" class="px-3 py-1 bg-slate-800 hover:bg-blue-600/30 hover:border-blue-500 text-slate-200 hover:text-white rounded-lg border border-slate-700 font-mono font-bold transition">TRUE</button>
+                </div>
+            </div>
+
+            <!-- Analysis Content Area -->
+            <div id="easyResultContainer" class="space-y-6">
+                <!-- Stock Header Card -->
+                <div class="bg-stream-panel rounded-2xl border border-stream p-5 flex flex-wrap items-center justify-between gap-4">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-14 h-14 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center font-mono font-black text-2xl text-blue-400" id="easySymbolBadge">
+                            CPALL
+                        </div>
+                        <div>
+                            <div class="flex items-baseline space-x-3">
+                                <h3 id="easySymbolText" class="text-3xl font-black font-mono text-white">CPALL</h3>
+                                <span id="easyLastText" class="text-3xl font-black font-mono stock-up">64.50</span>
+                                <span id="easyChangeText" class="text-base font-bold font-mono stock-up">+1.25 (+1.98%)</span>
+                            </div>
+                            <div class="flex items-center space-x-3 text-xs text-slate-400 mt-0.5">
+                                <span>High / Low: <strong id="easyHighLowText" class="text-slate-200 font-mono">65.00 / 63.75</strong></span>
+                                <span>•</span>
+                                <span>ปริมาณซื้อขาย: <strong id="easyVolText" class="text-slate-200 font-mono">24.5M</strong> หุ้น</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center space-x-3">
+                        <button onclick="easyQuickBuy(1000)" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs transition shadow-lg shadow-emerald-500/20 flex items-center space-x-2">
+                            <span>⚡</span> <span>ซื้อทันที (1,000 หุ้น)</span>
+                        </button>
+                        <button onclick="easyAddToWatchlist()" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-xl text-xs font-semibold border border-slate-700 transition flex items-center space-x-1.5">
+                            <span>⭐</span> <span>บันทึก Watchlist</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 4 Major Decision Cards: Buy Price, Target, Cut Loss, Trend -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <!-- 1. Recommended Buy Price -->
+                    <div class="bg-stream-panel rounded-2xl border-2 border-blue-500/40 p-5 space-y-2 relative overflow-hidden">
+                        <div class="absolute -right-3 -top-3 w-16 h-16 bg-blue-500/10 rounded-full blur-xl"></div>
+                        <div class="flex items-center justify-between text-xs text-blue-400 font-bold">
+                            <span>🎯 ราคาซื้อที่แนะนำ</span>
+                            <span class="text-[10px] bg-blue-500/20 px-2 py-0.5 rounded font-mono">BUY ZONE</span>
+                        </div>
+                        <div id="easyBuyZone" class="text-2xl font-black font-mono text-white">63.50 - 64.50 ฿</div>
+                        <p class="text-[11px] text-slate-400 leading-tight">ราคาเข้าสะสมที่ไม่ไล่ราคา ปลอดภัยต่อการลงทุน</p>
+                    </div>
+
+                    <!-- 2. Target Price -->
+                    <div class="bg-stream-panel rounded-2xl border-2 border-emerald-500/40 p-5 space-y-2 relative overflow-hidden">
+                        <div class="absolute -right-3 -top-3 w-16 h-16 bg-emerald-500/10 rounded-full blur-xl"></div>
+                        <div class="flex items-center justify-between text-xs text-emerald-400 font-bold">
+                            <span>📈 เป้าหมายทำกำไร</span>
+                            <span class="text-[10px] bg-emerald-500/20 px-2 py-0.5 rounded font-mono">TARGET</span>
+                        </div>
+                        <div id="easyTargetText" class="text-2xl font-black font-mono text-emerald-400">70.00 ฿ (+8.5%)</div>
+                        <p class="text-[11px] text-slate-400 leading-tight">แนวต้านสำคัญและเป้าประเมินมูลค่างวดถัดไป</p>
+                    </div>
+
+                    <!-- 3. Cut Loss -->
+                    <div class="bg-stream-panel rounded-2xl border-2 border-rose-500/40 p-5 space-y-2 relative overflow-hidden">
+                        <div class="absolute -right-3 -top-3 w-16 h-16 bg-rose-500/10 rounded-full blur-xl"></div>
+                        <div class="flex items-center justify-between text-xs text-rose-400 font-bold">
+                            <span>🛑 จุดตัดขาดทุน</span>
+                            <span class="text-[10px] bg-rose-500/20 px-2 py-0.5 rounded font-mono">CUT LOSS</span>
+                        </div>
+                        <div id="easyStopText" class="text-2xl font-black font-mono text-rose-400">62.00 ฿ (-3.8%)</div>
+                        <p class="text-[11px] text-slate-400 leading-tight">หากหลุดราคานี้ควรตัดขาดทุนเพื่อปกป้องเงินต้น</p>
+                    </div>
+
+                    <!-- 4. Trend & R:R -->
+                    <div class="bg-stream-panel rounded-2xl border-2 border-purple-500/40 p-5 space-y-2 relative overflow-hidden">
+                        <div class="absolute -right-3 -top-3 w-16 h-16 bg-purple-500/10 rounded-full blur-xl"></div>
+                        <div class="flex items-center justify-between text-xs text-purple-400 font-bold">
+                            <span>📊 แนวโน้มราคา</span>
+                            <span class="text-[10px] bg-purple-500/20 px-2 py-0.5 rounded font-mono">TREND</span>
+                        </div>
+                        <div id="easyTrendText" class="text-xl font-black font-mono text-white">ขาขึ้น (UPTREND)</div>
+                        <div class="text-[11px] text-slate-400 flex items-center justify-between">
+                            <span>ความคุ้มค่า R:R:</span>
+                            <strong id="easyRRText" class="text-purple-300 font-mono">2.24 : 1 (คุ้ม)</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Big Recommendation Verdict Banner -->
+                <div id="easyVerdictCard" class="p-5 rounded-2xl border border-emerald-500/40 bg-gradient-to-r from-emerald-950/40 via-slate-900 to-stream-panel space-y-2">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div class="flex items-center space-x-3">
+                            <span id="easyVerdictBadge" class="px-4 py-1.5 rounded-full text-xs font-black font-mono bg-emerald-500 text-slate-950">
+                                BUY (น่าซื้อลงทุน)
+                            </span>
+                            <h4 id="easyHeadlineText" class="text-base font-bold text-white">สัญญาณซื้อเด่น ปัจจัยเทคนิคและพื้นฐานสนับสนุน</h4>
+                        </div>
+                        <span id="easyConfidenceText" class="text-xs text-emerald-400 font-mono font-bold bg-emerald-500/10 px-3 py-1 rounded-lg border border-emerald-500/20">
+                            ความเชื่อมั่น AI: 85%
+                        </span>
+                    </div>
+                    <p id="easySummaryText" class="text-xs md:text-sm text-slate-200 leading-relaxed pt-1">
+                        กราฟราคาเคลื่อนไหวเหนือเส้นค่าเฉลี่ย 200 วัน มีแรงซื้อสะสมสม่ำเสมอ งบการเงินแข็งแกร่งไม่เสี่ยงล้มละลาย
+                    </p>
+                </div>
+
+                <!-- Interactive TradingView Candlestick Chart (ตามที่ผู้ใช้ขอ) -->
+                <div class="bg-stream-panel rounded-2xl border border-stream p-4 space-y-3">
+                    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-stream pb-3">
+                        <div class="flex items-center space-x-2">
+                            <span class="text-base">📈</span>
+                            <h3 class="font-bold text-white text-sm">กราฟราคาเทคนิคแบบอินเตอร์แอคทีฟ (TradingView Interactive Chart)</h3>
+                            <span class="text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded font-mono">SET EXCHANGE</span>
+                        </div>
+                        <span class="text-xs text-slate-400">ปรับอินดิเคเตอร์, ไทม์เฟรม, และวาดเส้นเทรนด์ได้อิสระ</span>
+                    </div>
+                    <!-- Chart Frame -->
+                    <div id="tradingview_chart_container" class="w-full h-[480px] rounded-xl overflow-hidden border border-slate-800 bg-slate-950 flex items-center justify-center text-slate-500">
+                        <span>⏳ กำลังโหลดกราฟราคา TradingView...</span>
+                    </div>
+                </div>
+
+                <!-- 3 Easy Pillars (พื้นฐาน, กราฟ, การคุมเงิน) -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                    <!-- Pillar 1: กราฟและวอลุ่ม -->
+                    <div class="bg-stream-panel p-4 rounded-xl border border-stream space-y-2">
+                        <h4 class="font-bold text-slate-200 flex items-center space-x-1.5 text-sm">
+                            <span>📊</span> <span>1. กราฟเทคนิค & สภาพคล่อง</span>
+                        </h4>
+                        <div class="flex justify-between py-1 border-b border-slate-800 text-slate-300">
+                            <span>สัญญาณวอลุ่ม Smart Money:</span>
+                            <span id="easyVsaText" class="font-bold text-white font-mono">ปกติ</span>
+                        </div>
+                        <div class="flex justify-between py-1 border-b border-slate-800 text-slate-300">
+                            <span>เส้นค่าเฉลี่ย EMA:</span>
+                            <span id="easyEmaText" class="font-bold text-emerald-400 font-mono">เรียงตัวขาขึ้น</span>
+                        </div>
+                        <div class="flex justify-between py-1 text-slate-300">
+                            <span>กรอบการแกว่ง (Ceiling/Floor):</span>
+                            <span id="easyCeilFloorText" class="font-bold text-slate-200 font-mono">75.00 / 45.00</span>
+                        </div>
+                    </div>
+
+                    <!-- Pillar 2: พื้นฐานงบการเงิน -->
+                    <div class="bg-stream-panel p-4 rounded-xl border border-stream space-y-2">
+                        <h4 class="font-bold text-slate-200 flex items-center space-x-1.5 text-sm">
+                            <span>🏢</span> <span>2. สุขภาพการเงิน & ความปลอดภัย</span>
+                        </h4>
+                        <div class="flex justify-between py-1 border-b border-slate-800 text-slate-300">
+                            <span>คะแนนงบ 5 ปี (F-Score):</span>
+                            <span id="easyFscoreText" class="font-bold text-white font-mono">7/9 (ดีมาก)</span>
+                        </div>
+                        <div class="flex justify-between py-1 border-b border-slate-800 text-slate-300">
+                            <span>ความเสี่ยงล้มละลาย (Altman):</span>
+                            <span id="easyAltmanText" class="font-bold text-emerald-400 font-mono">ปลอดภัย</span>
+                        </div>
+                        <div class="flex justify-between py-1 text-slate-300">
+                            <span>ความถูกแพง (P/E Ratio):</span>
+                            <span id="easyPeText" class="font-bold text-white font-mono">15.2x</span>
+                        </div>
+                    </div>
+
+                    <!-- Pillar 3: คำแนะนำขนาดไม้ -->
+                    <div class="bg-stream-panel p-4 rounded-xl border border-stream space-y-2">
+                        <h4 class="font-bold text-slate-200 flex items-center space-x-1.5 text-sm">
+                            <span>💡</span> <span>3. ขนาดไม้ที่ระบบแนะนำ</span>
+                        </h4>
+                        <div class="flex justify-between py-1 border-b border-slate-800 text-slate-300">
+                            <span>จำนวนหุ้นที่ควรซื้อ:</span>
+                            <span id="easySharesText" class="font-bold text-emerald-400 font-mono text-sm">1,500 หุ้น</span>
+                        </div>
+                        <div class="flex justify-between py-1 border-b border-slate-800 text-slate-300">
+                            <span>มูลค่าการซื้อโดยประมาณ:</span>
+                            <span id="easyTradeValText" class="font-bold text-white font-mono">96,750 ฿</span>
+                        </div>
+                        <div class="flex justify-between py-1 text-slate-300">
+                            <span>ความเสี่ยงพอร์ต:</span>
+                            <span class="font-bold text-blue-400 font-mono">ไม่เกิน 1.5% ของเงินสด</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bottom Quick Action Bar -->
+                <div class="bg-slate-900 border border-blue-500/30 p-4 rounded-2xl flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <span class="font-bold text-white text-sm">ต้องการเข้าซื้อหุ้นตัวนี้เข้าพอร์ตจำลองหรือไม่?</span>
+                        <p class="text-xs text-slate-400">ระบบจะทำการจับคู่คำสั่งทันที และบันทึกประวัติเพื่อวัดผลกำไรขาดทุน</p>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button onclick="easyQuickBuy(1000)" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs transition shadow-lg shadow-emerald-500/30 flex items-center space-x-1.5">
+                            <span>⚡</span> <span>ซื้อทันที 1,000 หุ้น</span>
+                        </button>
+                        <button onclick="easyQuickBuy(cachedAiShares)" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs transition shadow-lg shadow-blue-500/30 flex items-center space-x-1.5">
+                            <span>🎯</span> <span>ซื้อตามขนาดที่ AI แนะนำ</span>
+                        </button>
+                        <button onclick="switchTab('quote')" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-semibold border border-slate-700 transition">
+                            ดู 5 Bid / 5 Offer ➔
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <!-- ============================================== -->
         <!-- TAB 1: WATCHLIST (Settrade Streaming Style)    -->
         <!-- ============================================== -->
-        <section id="view-watchlist" class="space-y-4">
+        <section id="view-watchlist" class="hidden space-y-4">
             <div class="flex flex-wrap items-center justify-between gap-3 bg-stream-panel p-3.5 rounded-xl border border-stream">
                 <div>
                     <h2 class="text-base font-bold text-white flex items-center space-x-2">
@@ -1000,33 +1251,235 @@ def index_html():
 
     <!-- App JavaScript -->
     <script>
-        let currentTab = 'watchlist';
-        let currentSymbol = 'PTT';
+        let currentTab = 'analyzer';
+        let currentSymbol = 'CPALL';
         let currentSide = 'BUY';
         let cachedAiShares = 1000;
 
         function switchTab(tab) {
             currentTab = tab;
-            ['watchlist', 'quote', 'top5', 'order', 'portfolio', 'accuracy'].forEach(t => {
+            ['analyzer', 'watchlist', 'quote', 'top5', 'order', 'portfolio', 'accuracy'].forEach(t => {
                 const el = document.getElementById(`view-${t}`);
                 const btn = document.getElementById(`tab-${t}`);
                 if (el && btn) {
                     if (t === tab) {
                         el.classList.remove('hidden');
-                        btn.className = 'px-4 py-2.5 font-bold rounded-t-lg transition flex items-center space-x-2 border-b-2 border-blue-500 text-blue-400 bg-stream-dark';
+                        btn.className = 'px-4 py-2.5 font-bold rounded-t-lg transition flex items-center space-x-2 border-b-2 border-blue-500 text-blue-400 bg-stream-dark whitespace-nowrap';
                     } else {
                         el.classList.add('hidden');
-                        btn.className = 'px-4 py-2.5 font-medium rounded-t-lg transition flex items-center space-x-2 border-b-2 border-transparent text-slate-400 hover:text-white';
+                        btn.className = 'px-4 py-2.5 font-medium rounded-t-lg transition flex items-center space-x-2 border-b-2 border-transparent text-slate-400 hover:text-white whitespace-nowrap';
                     }
                 }
             });
 
+            if (tab === 'analyzer') loadAnalyzerData(currentSymbol);
             if (tab === 'watchlist') loadWatchlist();
             if (tab === 'quote') loadQuote(currentSymbol);
             if (tab === 'top5') loadTop5();
             if (tab === 'portfolio') { loadPortfolio(); loadOrders(); }
             if (tab === 'order') updateEstimatedValue();
             if (tab === 'accuracy') loadAccuracyDashboard();
+        }
+
+        function analyzeStock(symbol) {
+            if (!symbol) {
+                const input = document.getElementById('easySymbolInput');
+                symbol = input ? input.value : currentSymbol;
+            }
+            symbol = (symbol || 'CPALL').trim().toUpperCase();
+            currentSymbol = symbol;
+            const input = document.getElementById('easySymbolInput');
+            if (input) input.value = symbol;
+
+            switchTab('analyzer');
+            loadAnalyzerData(symbol);
+        }
+
+        function renderTradingViewChart(symbol) {
+            const container = document.getElementById('tradingview_chart_container');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const cleanSym = symbol.replace('.BK', '').toUpperCase();
+            if (typeof TradingView !== 'undefined') {
+                new TradingView.widget({
+                    "autosize": true,
+                    "symbol": "SET:" + cleanSym,
+                    "interval": "D",
+                    "timezone": "Asia/Bangkok",
+                    "theme": "dark",
+                    "style": "1",
+                    "locale": "th_TH",
+                    "toolbar_bg": "#151922",
+                    "enable_publishing": false,
+                    "allow_symbol_change": true,
+                    "container_id": "tradingview_chart_container"
+                });
+            } else {
+                container.innerHTML = '<div class="flex items-center justify-center h-full text-slate-400 font-sans">กำลังเชื่อมต่อสัญญาณกราฟ TradingView...</div>';
+            }
+        }
+
+        async function loadAnalyzerData(symbol) {
+            symbol = (symbol || currentSymbol || 'CPALL').toUpperCase();
+            refreshAccount();
+
+            try {
+                const res = await fetch(`/api/quote/${symbol}`);
+                const data = await res.json();
+
+                currentSymbol = data.symbol;
+                cachedAiShares = data.analysis.recommended_shares || 1000;
+
+                // Header Badges
+                const elBadge = document.getElementById('easySymbolBadge');
+                if (elBadge) elBadge.innerText = data.symbol;
+                const elSym = document.getElementById('easySymbolText');
+                if (elSym) elSym.innerText = data.symbol;
+
+                const isUp = data.change > 0;
+                const isDown = data.change < 0;
+                const colorClass = isUp ? 'stock-up' : (isDown ? 'stock-down' : 'stock-flat');
+                const sign = isUp ? '+' : '';
+
+                const elLast = document.getElementById('easyLastText');
+                if (elLast) {
+                    elLast.innerText = data.last.toFixed(2);
+                    elLast.className = `text-3xl font-black font-mono ${colorClass}`;
+                }
+
+                const elChg = document.getElementById('easyChangeText');
+                if (elChg) {
+                    elChg.innerText = `${sign}${data.change.toFixed(2)} (${sign}${data.pct_change.toFixed(2)}%)`;
+                    elChg.className = `text-base font-bold font-mono ${colorClass}`;
+                }
+
+                const elHL = document.getElementById('easyHighLowText');
+                if (elHL) elHL.innerText = `${data.high.toFixed(2)} / ${data.low.toFixed(2)}`;
+                const elVol = document.getElementById('easyVolText');
+                if (elVol) elVol.innerText = `${(data.volume / 1000000).toFixed(2)}M`;
+
+                // 4 Major Decision Cards
+                const buyLow = (data.analysis.entry_price || data.last * 0.99).toFixed(2);
+                const buyHigh = (data.last).toFixed(2);
+                const elBuyZone = document.getElementById('easyBuyZone');
+                if (elBuyZone) elBuyZone.innerText = `${buyLow} - ${buyHigh} ฿`;
+
+                const targetDiff = data.analysis.target_price - data.last;
+                const targetPct = ((targetDiff / data.last) * 100).toFixed(1);
+                const elTarget = document.getElementById('easyTargetText');
+                if (elTarget) elTarget.innerText = `${data.analysis.target_price.toFixed(2)} ฿ (+${targetPct}%)`;
+
+                const stopDiff = data.analysis.stop_loss - data.last;
+                const stopPct = ((stopDiff / data.last) * 100).toFixed(1);
+                const elStop = document.getElementById('easyStopText');
+                if (elStop) elStop.innerText = `${data.analysis.stop_loss.toFixed(2)} ฿ (${stopPct}%)`;
+
+                const elTrend = document.getElementById('easyTrendText');
+                if (elTrend) elTrend.innerText = data.analysis.trend;
+                const elRR = document.getElementById('easyRRText');
+                if (elRR) elRR.innerText = `${data.analysis.reward_risk.toFixed(2)} : 1 (${data.analysis.reward_risk >= 2 ? 'คุ้มค่ามาก' : 'ระวัง'})`;
+
+                // Big Verdict Card
+                const isBuy = data.analysis.decision === 'BUY' || data.analysis.decision === 'ACCUMULATE';
+                const vCard = document.getElementById('easyVerdictCard');
+                const vBadge = document.getElementById('easyVerdictBadge');
+                if (vCard && vBadge) {
+                    if (isBuy) {
+                        vCard.className = 'p-5 rounded-2xl border border-emerald-500/40 bg-gradient-to-r from-emerald-950/40 via-slate-900 to-stream-panel space-y-2';
+                        vBadge.className = 'px-4 py-1.5 rounded-full text-xs font-black font-mono bg-emerald-500 text-slate-950';
+                        vBadge.innerText = 'BUY (แนะนำเข้าซื้อ)';
+                    } else {
+                        vCard.className = 'p-5 rounded-2xl border border-amber-500/40 bg-gradient-to-r from-amber-950/40 via-slate-900 to-stream-panel space-y-2';
+                        vBadge.className = 'px-4 py-1.5 rounded-full text-xs font-black font-mono bg-amber-500/20 text-amber-400 border border-amber-500/30';
+                        vBadge.innerText = 'WAIT (ให้รอจังหวะ)';
+                    }
+                }
+                const elHeadline = document.getElementById('easyHeadlineText');
+                if (elHeadline) elHeadline.innerText = data.analysis.headline;
+                const elConf = document.getElementById('easyConfidenceText');
+                if (elConf) elConf.innerText = `ความเชื่อมั่น AI: ${data.analysis.confidence}%`;
+                const elSummary = document.getElementById('easySummaryText');
+                if (elSummary) elSummary.innerText = data.analysis.overall_summary;
+
+                // 3 Pillars
+                const elVsa = document.getElementById('easyVsaText');
+                if (elVsa) elVsa.innerText = data.analysis.vsa_signal;
+                const elEma = document.getElementById('easyEmaText');
+                if (elEma) elEma.innerText = data.analysis.triple_ema ? 'เรียงตัวขาขึ้น (Bullish)' : 'ยังไม่เรียงตัว';
+                const elCeilFloor = document.getElementById('easyCeilFloorText');
+                if (elCeilFloor) elCeilFloor.innerText = `${data.ceiling.toFixed(2)} / ${data.floor.toFixed(2)}`;
+
+                const elFscore = document.getElementById('easyFscoreText');
+                if (elFscore) elFscore.innerText = `${data.analysis.f_score}/9 (${data.analysis.f_score_passed ? 'งบดีมาก' : 'งบปานกลาง'})`;
+                const elAltman = document.getElementById('easyAltmanText');
+                if (elAltman) elAltman.innerText = `${data.analysis.altman_z.toFixed(2)} (${data.analysis.altman_zone})`;
+                const elPe = document.getElementById('easyPeText');
+                if (elPe) elPe.innerText = data.analysis.pe_ratio ? `${data.analysis.pe_ratio}x` : 'N/A';
+
+                const elShares = document.getElementById('easySharesText');
+                if (elShares) elShares.innerText = `${(data.analysis.recommended_shares || 1000).toLocaleString()} หุ้น`;
+                const elTradeVal = document.getElementById('easyTradeValText');
+                if (elTradeVal) elTradeVal.innerText = `${(data.analysis.trade_value || 0).toLocaleString()} ฿`;
+
+                // Render TradingView Chart
+                renderTradingViewChart(data.symbol);
+
+                // Sync Order Pad inputs
+                const ordSym = document.getElementById('orderSymbol');
+                if (ordSym) ordSym.value = data.symbol;
+                const ordPrice = document.getElementById('orderPrice');
+                if (ordPrice) ordPrice.value = data.last.toFixed(2);
+                const ordVol = document.getElementById('orderVolume');
+                if (ordVol) ordVol.value = data.analysis.recommended_shares > 0 ? data.analysis.recommended_shares : 1000;
+
+            } catch (e) {
+                console.error('Failed to load analyzer data:', e);
+            }
+        }
+
+        async function easyQuickBuy(shares) {
+            const vol = shares || 1000;
+            const priceText = document.getElementById('easyLastText').innerText;
+            const price = parseFloat(priceText) || 0;
+            if (!confirm(`ยืนยันส่งคำสั่งซื้อจำลองหุ้น ${currentSymbol}\nจำนวน: ${vol.toLocaleString()} หุ้น\nราคาประมาณ: ${price.toFixed(2)} บาท\nมูลค่ารวม: ${(vol * price).toLocaleString()} บาท?`)) return;
+
+            try {
+                const res = await fetch('/api/order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        symbol: currentSymbol,
+                        side: 'BUY',
+                        volume: vol,
+                        price: price,
+                        pin: '000000'
+                    })
+                });
+                const data = await res.json();
+                if (data.status === 'SUCCESS') {
+                    alert(`✅ ส่งคำสั่งซื้อ ${currentSymbol} จำนวน ${vol.toLocaleString()} หุ้น สำเร็จแล้ว!\nระบบทำการบันทึกและคำนวณเข้าพอร์ตเรียบร้อย`);
+                    refreshAccount();
+                } else {
+                    alert(`⚠️ ผลลัพธ์: ${data.message || 'ส่งคำสั่งเรียบร้อย'}`);
+                }
+            } catch (e) {
+                alert('เกิดข้อผิดพลาดในการส่งคำสั่งซื้อ');
+            }
+        }
+
+        async function easyAddToWatchlist() {
+            try {
+                const res = await fetch('/api/watchlist', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ symbol: currentSymbol })
+                });
+                const data = await res.json();
+                alert(`⭐ เพิ่มหุ้น ${currentSymbol} ลงใน Watchlist เรียบร้อยแล้ว`);
+            } catch (e) {
+                alert('เกิดข้อผิดพลาดในการบันทึก Watchlist');
+            }
         }
 
         async function refreshAccount() {
@@ -1174,15 +1627,14 @@ def index_html():
         }
 
         function selectStock(symbol) {
-            currentSymbol = symbol;
-            switchTab('quote');
+            analyzeStock(symbol);
         }
 
         function quickSearch() {
             const sym = document.getElementById('quickSearchInput').value.trim();
             if (sym) {
                 document.getElementById('quickSearchInput').value = '';
-                selectStock(sym);
+                analyzeStock(sym);
             }
         }
 
@@ -1665,7 +2117,7 @@ def index_html():
         }
 
         // Initialize on page load
-        switchTab('watchlist');
+        switchTab('analyzer');
     </script>
 </body>
 </html>"""
