@@ -1669,3 +1669,12 @@ def index_html():
     </script>
 </body>
 </html>"""
+
+
+if __name__ == "__main__":
+    import os
+    import uvicorn
+    port = int(os.environ.get("PORT", 8555))
+    print(f"Starting SET-QuantAI Web Terminal on port {port}...")
+    uvicorn.run("set_quantai.web_app:web_app", host="0.0.0.0", port=port, log_level="info")
+
