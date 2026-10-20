@@ -114,6 +114,11 @@ def get_top5_recommendations():
     return TopPicksEngine.get_top5_recommendations(pipeline)
 
 
+@web_app.get("/api/top10-recommendations")
+def get_top10_recommendations():
+    return TopPicksEngine.get_top_recommendations(pipeline, count=10)
+
+
 @web_app.post("/api/auto-trade/buy-top5")
 def auto_trade_buy_top5():
     res = AutoTraderEngine.execute_top5_purchases(pipeline, shares_per_stock=1000)
@@ -426,8 +431,8 @@ def index_html():
                 <button onclick="switchTab('analyzer')" id="tab-analyzer" class="px-4 py-2.5 font-bold rounded-t-lg transition flex items-center space-x-2 border-b-2 border-blue-500 text-blue-400 bg-stream-dark whitespace-nowrap">
                     <span>🔍</span> <span>วิเคราะห์หุ้น & ดูกราฟ (Easy Analyzer)</span>
                 </button>
-                <button onclick="switchTab('top5')" id="tab-top5" class="px-4 py-2.5 font-medium rounded-t-lg transition flex items-center space-x-2 border-b-2 border-transparent text-slate-400 hover:text-white whitespace-nowrap">
-                    <span>🎯</span> <span>Top 5 หุ้น AI แนะนำ</span>
+                <button onclick="switchTab('top10')" id="tab-top10" class="px-4 py-2.5 font-medium rounded-t-lg transition flex items-center space-x-2 border-b-2 border-transparent text-slate-400 hover:text-white whitespace-nowrap">
+                    <span>🎯</span> <span>กวาดหุ้นเด่น 10 ตัว (ควรซื้อ / ควรขาย)</span>
                 </button>
                 <button onclick="switchTab('portfolio')" id="tab-portfolio" class="px-4 py-2.5 font-medium rounded-t-lg transition flex items-center space-x-2 border-b-2 border-transparent text-slate-400 hover:text-white whitespace-nowrap">
                     <span>💼</span> <span>พอร์ต & คำสั่งซื้อขาย (Portfolio)</span>
@@ -1089,30 +1094,54 @@ def index_html():
             </div>
         </section>
 
-        <!-- ============================================== -->
-        <!-- TAB 5: TOP 5 AI QUANT PICKS (IN-DEPTH)         -->
-        <!-- ============================================== -->
-        <section id="view-top5" class="hidden space-y-6">
+        <!-- ======================================================== -->
+        <!-- TAB 2: TOP 10 SCANNER (กวาดหุ้นวิเคราะห์ ควรซื้อ / ควรขาย)  -->
+        <!-- ======================================================== -->
+        <section id="view-top10" class="hidden space-y-6">
             <!-- Header Banner -->
-            <div class="bg-gradient-to-r from-blue-950/70 via-slate-900 to-emerald-950/70 p-5 rounded-2xl border border-blue-500/30 flex flex-wrap items-center justify-between gap-4 shadow-xl">
+            <div class="bg-gradient-to-r from-blue-950/80 via-slate-900 to-indigo-950/80 p-5 md:p-6 rounded-2xl border border-blue-500/30 flex flex-wrap items-center justify-between gap-4 shadow-xl">
                 <div>
-                    <div class="flex items-center space-x-2">
+                    <div class="flex items-center space-x-3">
                         <span class="text-2xl">🎯</span>
-                        <h2 class="text-lg font-bold text-white">5 หุ้นแนะนำเด่นประจำวัน (Top 5 AI Quant Recommendations)</h2>
-                        <span class="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full font-mono font-bold">CONFLUENCE APPROVED</span>
+                        <h2 class="text-xl font-bold text-white">กวาดหุ้นเด่น 10 ตัวประจำวัน (Top 10 ควรซื้อ / ควรขาย)</h2>
+                        <span class="text-xs bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 rounded-full font-mono font-bold">REAL-TIME QUANT SCAN</span>
                     </div>
-                    <p class="text-xs text-slate-300 mt-1">คัดกรองจากหุ้นผู้นำตลาด SET ด้วยโมเดล Piotroski F-Score, Altman Z'' ปลอดภัย, โครงสร้าง Wyckoff ขาขึ้น พร้อมคำนวณราคาเข้าซื้อ-เป้าหมายขายทำกำไรที่เหมาะสม</p>
+                    <p class="text-xs md:text-sm text-slate-300 mt-1">
+                        สแกนหุ้นผู้นำตลาด SET คัด 10 ตัวที่ดีที่สุด แยกกลุ่มชัดเจนว่า <strong>ควรซื้อสะสม</strong> หรือ <strong>ควรขายทำกำไร</strong> พร้อมอัปเดตราคาตลาด ราคาซื้อ-ขายเป้าหมาย และจุดคัทลอสเรียลไทม์
+                    </p>
                 </div>
-                <button onclick="loadTop5()" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold transition flex items-center space-x-1.5 shadow-lg shadow-blue-500/20">
-                    <span>🔄</span> <span>รีเฟรชสแกน 5 หุ้น</span>
-                </button>
+                <div class="flex items-center space-x-2">
+                    <button onclick="loadTop10()" class="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-lg shadow-blue-500/30">
+                        <span>🔄</span> <span>สแกนใหม่แบบ Real-time</span>
+                    </button>
+                </div>
             </div>
 
-            <!-- Container for 5 Stock Cards -->
-            <div id="top5CardsContainer" class="space-y-6">
-                <div class="text-center py-12 text-slate-400 text-sm font-sans">⏳ กำลังประมวลผลโมเดล Quant คัดกรอง 5 หุ้นแนะนำที่ดีที่สุด...</div>
+            <!-- Filter Category Bar -->
+            <div class="flex flex-wrap items-center justify-between gap-3 bg-stream-panel p-3.5 rounded-xl border border-stream text-xs">
+                <div class="flex items-center space-x-2">
+                    <span class="text-slate-400 font-semibold mr-1">กรองดูเฉพาะ:</span>
+                    <button type="button" onclick="filterTop10('ALL')" id="filterBtnAll" class="px-3.5 py-1.5 rounded-lg font-bold bg-blue-600 text-white transition">
+                        ทั้งหมด (10 ตัว)
+                    </button>
+                    <button type="button" onclick="filterTop10('BUY')" id="filterBtnBuy" class="px-3.5 py-1.5 rounded-lg font-semibold bg-slate-800 text-slate-300 hover:text-emerald-400 transition">
+                        🟢 ควรซื้อสะสม (BUY)
+                    </button>
+                    <button type="button" onclick="filterTop10('SELL')" id="filterBtnSell" class="px-3.5 py-1.5 rounded-lg font-semibold bg-slate-800 text-slate-300 hover:text-rose-400 transition">
+                        🔴 ควรขายทำกำไร (SELL)
+                    </button>
+                </div>
+                <div class="text-slate-400 font-mono text-[11px]">
+                    คัดจากหุ้นที่มีสภาพคล่องสูงในตลาด SET • อัปเดตราคาแบบอัตโนมัติ
+                </div>
+            </div>
+
+            <!-- Container for 10 Stock Cards -->
+            <div id="top10CardsContainer" class="space-y-4">
+                <div class="text-center py-12 text-slate-400 text-sm font-sans">⏳ กำลังประมวลผลกวาดวิเคราะห์ 10 หุ้นเด่น...</div>
             </div>
         </section>
+        <section id="view-top5" class="hidden"></section>
 
         <!-- ============================================== -->
         <!-- TAB 6: ACCURACY & PERFORMANCE DASHBOARD       -->
@@ -1283,24 +1312,29 @@ def index_html():
 
         function switchTab(tab) {
             currentTab = tab;
-            ['analyzer', 'watchlist', 'quote', 'top5', 'order', 'portfolio', 'accuracy'].forEach(t => {
+            ['analyzer', 'top10', 'watchlist', 'quote', 'top5', 'order', 'portfolio', 'accuracy'].forEach(t => {
                 const el = document.getElementById(`view-${t}`);
                 const btn = document.getElementById(`tab-${t}`);
-                if (el && btn) {
-                    if (t === tab) {
+                if (el) {
+                    if (t === tab || (tab === 'top10' && t === 'top10') || (tab === 'top5' && t === 'top10')) {
                         el.classList.remove('hidden');
-                        btn.className = 'px-4 py-2.5 font-bold rounded-t-lg transition flex items-center space-x-2 border-b-2 border-blue-500 text-blue-400 bg-stream-dark whitespace-nowrap';
                     } else {
                         el.classList.add('hidden');
+                    }
+                }
+                if (btn) {
+                    if (t === tab || (tab === 'top5' && t === 'top10')) {
+                        btn.className = 'px-4 py-2.5 font-bold rounded-t-lg transition flex items-center space-x-2 border-b-2 border-blue-500 text-blue-400 bg-stream-dark whitespace-nowrap';
+                    } else {
                         btn.className = 'px-4 py-2.5 font-medium rounded-t-lg transition flex items-center space-x-2 border-b-2 border-transparent text-slate-400 hover:text-white whitespace-nowrap';
                     }
                 }
             });
 
             if (tab === 'analyzer') loadAnalyzerData(currentSymbol);
+            if (tab === 'top10' || tab === 'top5') loadTop10();
             if (tab === 'watchlist') loadWatchlist();
             if (tab === 'quote') loadQuote(currentSymbol);
-            if (tab === 'top5') loadTop5();
             if (tab === 'portfolio') { loadPortfolio(); loadOrders(); }
             if (tab === 'order') updateEstimatedValue();
             if (tab === 'accuracy') loadAccuracyDashboard();
@@ -1874,141 +1908,187 @@ def index_html():
             }
         }
 
-        async function loadTop5() {
+        let cachedTop10Data = [];
+        let currentTop10Filter = 'ALL';
+
+        function filterTop10(type) {
+            currentTop10Filter = type;
+            ['All', 'Buy', 'Sell'].forEach(btn => {
+                const b = document.getElementById(`filterBtn${btn}`);
+                if (b) {
+                    if (btn.toUpperCase() === type) {
+                        b.className = 'px-3.5 py-1.5 rounded-lg font-bold bg-blue-600 text-white transition shadow';
+                    } else {
+                        b.className = 'px-3.5 py-1.5 rounded-lg font-semibold bg-slate-800 text-slate-300 hover:text-white transition';
+                    }
+                }
+            });
+            renderTop10Cards();
+        }
+
+        async function loadTop10() {
             refreshAccount();
-            const container = document.getElementById('top5CardsContainer');
-            container.innerHTML = '<div class="text-center py-12 text-slate-400 text-sm font-sans">⏳ กำลังประมวลผลโมเดล Quant คัดกรอง 5 หุ้นแนะนำที่ดีที่สุด...</div>';
+            const container = document.getElementById('top10CardsContainer');
+            if (container) {
+                container.innerHTML = '<div class="text-center py-12 text-slate-400 text-sm font-sans">⏳ กำลังประมวลผลกวาดวิเคราะห์ 10 หุ้นเด่นประจำวัน...</div>';
+            }
 
             try {
-                const res = await fetch('/api/top5-recommendations');
-                const list = await res.json();
-                container.innerHTML = '';
-
-                const medals = ['🥇 อันดับ 1', '🥈 อันดับ 2', '🥉 อันดับ 3', '⭐ อันดับ 4', '⭐ อันดับ 5'];
-                const rankColors = [
-                    'border-amber-500/40 bg-gradient-to-r from-amber-950/20 to-slate-900',
-                    'border-slate-400/40 bg-gradient-to-r from-slate-900 to-slate-900',
-                    'border-amber-700/40 bg-gradient-to-r from-amber-950/10 to-slate-900',
-                    'border-stream bg-stream-panel',
-                    'border-stream bg-stream-panel'
-                ];
-
-                list.forEach((item, index) => {
-                    const card = document.createElement('div');
-                    card.className = `rounded-2xl border p-5 space-y-4 shadow-xl hover:border-blue-500/50 transition ${rankColors[index] || 'bg-stream-panel border-stream'}`;
-
-                    card.innerHTML = `
-                        <!-- Top Header Row -->
-                        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-stream pb-3">
-                            <div class="flex items-center space-x-3">
-                                <span class="px-3 py-1 rounded-full text-xs font-bold font-mono bg-blue-500/20 text-blue-400 border border-blue-500/30">
-                                    ${medals[index] || `#${item.rank}`}
-                                </span>
-                                <div>
-                                    <div class="flex items-baseline space-x-2">
-                                        <h3 class="text-2xl font-black text-white font-mono tracking-wide">${item.symbol}</h3>
-                                        <span class="text-xs text-slate-300 font-sans">${item.name_th}</span>
-                                    </div>
-                                    <span class="text-[11px] text-slate-400 font-sans">${item.sector}</span>
-                                </div>
-                            </div>
-
-                            <div class="flex items-baseline space-x-2 font-mono bg-stream-dark px-3 py-1.5 rounded-lg border border-stream">
-                                <span class="text-xs text-slate-400 font-sans">ราคาตลาดล่าสุด:</span>
-                                <span class="text-xl font-black text-white">${item.current_price.toFixed(2)} ฿</span>
-                            </div>
-                        </div>
-
-                        <!-- 4 Key Price Pillars (Highlight Buy Zone, Target 1, Target 2, Cut Loss) -->
-                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
-                            <div class="bg-emerald-950/30 border border-emerald-500/40 p-3 rounded-xl">
-                                <span class="text-emerald-400 text-[11px] font-sans font-semibold block">🟢 ราคาเข้าซื้อที่เหมาะสม</span>
-                                <span class="text-lg font-black text-emerald-400 block mt-1">${item.buy_zone}</span>
-                                <span class="text-[10px] text-slate-400 font-sans">รับที่แนวรับยกฐาน</span>
-                            </div>
-
-                            <div class="bg-blue-950/30 border border-blue-500/40 p-3 rounded-xl">
-                                <span class="text-blue-400 text-[11px] font-sans font-semibold block">🔴 เป้าขายทำกำไร 1</span>
-                                <span class="text-lg font-black text-white block mt-1">${item.target_1.toFixed(2)} ฿</span>
-                                <span class="text-[10px] text-emerald-400 font-sans font-bold">R:R ${item.reward_risk.toFixed(2)}:1 (คุ้มค่า)</span>
-                            </div>
-
-                            <div class="bg-indigo-950/30 border border-indigo-500/40 p-3 rounded-xl">
-                                <span class="text-indigo-400 text-[11px] font-sans font-semibold block">🚀 เป้าขายทำกำไร 2</span>
-                                <span class="text-lg font-black text-indigo-300 block mt-1">${item.target_2.toFixed(2)} ฿</span>
-                                <span class="text-[10px] text-slate-400 font-sans">เป้าขยายรอบใหญ่</span>
-                            </div>
-
-                            <div class="bg-rose-950/30 border border-rose-500/40 p-3 rounded-xl">
-                                <span class="text-rose-400 text-[11px] font-sans font-semibold block">🛡️ จุดตัดขาดทุน (Cut Loss)</span>
-                                <span class="text-lg font-black text-rose-400 block mt-1">${item.cut_loss.toFixed(2)} ฿</span>
-                                <span class="text-[10px] text-slate-400 font-sans">Dynamic ATR-14 Stop</span>
-                            </div>
-                        </div>
-
-                        <!-- Key Quant Strip -->
-                        <div class="flex flex-wrap gap-2 text-xs">
-                            <span class="px-2.5 py-1 rounded bg-slate-900 border border-stream text-slate-300">
-                                📊 Piotroski F-Score: <b class="text-emerald-400 font-mono">${item.f_score}/9 คะแนน</b>
-                            </span>
-                            <span class="px-2.5 py-1 rounded bg-slate-900 border border-stream text-slate-300">
-                                🛡️ Altman Z'': <b class="text-emerald-400 font-mono">${item.altman_z.toFixed(2)} (${item.altman_zone})</b>
-                            </span>
-                            <span class="px-2.5 py-1 rounded bg-slate-900 border border-stream text-slate-300">
-                                📈 Wyckoff Trend: <b class="text-blue-400 font-mono">${item.trend}</b>
-                            </span>
-                            <span class="px-2.5 py-1 rounded bg-slate-900 border border-stream text-slate-300">
-                                📦 ขนาดไม้ที่แนะนำ: <b class="text-emerald-400 font-mono">${item.recommended_shares.toLocaleString()} หุ้น (${item.recommended_lots} Lots)</b>
-                            </span>
-                        </div>
-
-                        <!-- Deep-Dive Analysis Content Box -->
-                        <div class="bg-stream-dark p-4 rounded-xl border border-stream space-y-2 text-xs leading-relaxed font-sans">
-                            <div class="flex items-start space-x-2">
-                                <span class="text-blue-400 font-bold">1. ปัจจัยพื้นฐาน & คุณภาพกำไร:</span>
-                                <span class="text-slate-300 flex-1">${item.deep_dive.fundamental_analysis}</span>
-                            </div>
-                            <div class="flex items-start space-x-2">
-                                <span class="text-emerald-400 font-bold">2. จังหวะเทคนิคอล & Smart Money:</span>
-                                <span class="text-slate-300 flex-1">${item.deep_dive.technical_analysis}</span>
-                            </div>
-                            <div class="flex items-start space-x-2">
-                                <span class="text-amber-400 font-bold">3. แผนกลยุทธ์ซื้อ-ขาย & ควบคุมความเสี่ยง:</span>
-                                <span class="text-slate-300 flex-1">${item.deep_dive.strategy_and_risk}</span>
-                            </div>
-                        </div>
-
-                        <!-- Bottom Action Buttons -->
-                        <div class="flex flex-wrap items-center justify-between gap-3 pt-2">
-                            <div class="text-xs text-slate-400 font-sans">
-                                มูลค่าเงินลงทุนแนะนำ: <span class="font-bold text-white font-mono">${item.trade_value.toLocaleString('en-US', {minimumFractionDigits: 2})} ฿</span>
-                                (คำนวณตามความเสี่ยง 1.5% ของพอร์ต)
-                            </div>
-                            <div class="flex items-center space-x-2">
-                                <button onclick="selectStock('${item.symbol}')" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-semibold transition">
-                                    📊 ดู Quote & 5 Bids/Asks
-                                </button>
-                                <button onclick="quickBuyFromTop5('${item.symbol}', ${item.buy_price}, ${item.recommended_shares})" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition shadow-lg shadow-emerald-500/20 flex items-center space-x-1.5">
-                                    <span>⚡</span> <span>ส่งคำสั่งซื้อตัวนี้ (${item.recommended_shares.toLocaleString()} หุ้น)</span>
-                                </button>
-                            </div>
-                        </div>
-                    `;
-
-                    container.appendChild(card);
-                });
-
+                const res = await fetch('/api/top10-recommendations');
+                cachedTop10Data = await res.json();
+                renderTop10Cards();
             } catch (e) {
-                container.innerHTML = '<div class="text-center py-12 text-rose-400 text-sm font-sans">เกิดข้อผิดพลาดในการโหลด 5 หุ้นแนะนำ</div>';
+                if (container) {
+                    container.innerHTML = '<div class="text-center py-12 text-rose-400 text-sm font-sans">เกิดข้อผิดพลาดในการโหลด 10 หุ้นแนะนำ</div>';
+                }
             }
         }
 
-        function quickBuyFromTop5(symbol, price, shares) {
-            document.getElementById('orderSymbol').value = symbol;
-            document.getElementById('orderPrice').value = price.toFixed(2);
-            document.getElementById('orderVolume').value = shares > 0 ? shares : 1000;
-            setSide('BUY');
-            switchTab('order');
+        async function loadTop5() {
+            await loadTop10();
+        }
+
+        function renderTop10Cards() {
+            const container = document.getElementById('top10CardsContainer');
+            if (!container) return;
+            container.innerHTML = '';
+
+            let filtered = cachedTop10Data;
+            if (currentTop10Filter === 'BUY') {
+                filtered = cachedTop10Data.filter(i => i.action === 'BUY' || i.action === 'ACCUMULATE');
+            } else if (currentTop10Filter === 'SELL') {
+                filtered = cachedTop10Data.filter(i => i.action === 'SELL' || i.action === 'HOLD');
+            }
+
+            if (filtered.length === 0) {
+                container.innerHTML = '<div class="text-center py-12 text-slate-400 text-sm font-sans">ไม่มีหุ้นในหมวดหมู่นี้</div>';
+                return;
+            }
+
+            filtered.forEach((item, index) => {
+                const isUp = item.change > 0;
+                const isDown = item.change < 0;
+                const colorClass = isUp ? 'stock-up' : (isDown ? 'stock-down' : 'stock-flat');
+                const sign = isUp ? '+' : '';
+
+                const isBuyAction = item.action === 'BUY' || item.action === 'ACCUMULATE';
+                const actionBadgeClass = isBuyAction ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-400 border border-rose-500/30';
+
+                const card = document.createElement('div');
+                card.className = `rounded-2xl border ${isBuyAction ? 'border-emerald-500/30 bg-gradient-to-r from-emerald-950/20 via-slate-900 to-stream-panel' : 'border-rose-500/30 bg-gradient-to-r from-rose-950/20 via-slate-900 to-stream-panel'} p-5 space-y-4 shadow-xl hover:border-blue-500/50 transition`;
+
+                card.innerHTML = `
+                    <!-- Top Header Row -->
+                    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-stream pb-3">
+                        <div class="flex items-center space-x-3">
+                            <span class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${item.rank <= 3 ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-slate-300'} font-mono">
+                                #${item.rank}
+                            </span>
+                            <div>
+                                <div class="flex items-baseline space-x-2">
+                                    <h3 class="text-2xl font-black text-white font-mono tracking-wide cursor-pointer hover:underline text-blue-400" onclick="analyzeStock('${item.symbol}')">${item.symbol}</h3>
+                                    <span class="text-xs text-slate-300 font-sans">${item.name_th}</span>
+                                </div>
+                                <span class="text-[11px] text-slate-400 font-sans">${item.sector}</span>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center space-x-3">
+                            <span class="px-3 py-1 rounded-full text-xs font-bold font-mono ${actionBadgeClass}">
+                                ${item.action_th}
+                            </span>
+                            <div class="text-right font-mono bg-stream-dark px-3 py-1.5 rounded-lg border border-stream">
+                                <span class="text-[10px] text-slate-400 font-sans block">ราคาตลาดล่าสุด</span>
+                                <span class="text-lg font-black ${colorClass}">${item.current_price.toFixed(2)} ฿</span>
+                                <span class="text-xs ${colorClass} font-bold ml-1">${sign}${item.change.toFixed(2)} (${sign}${item.pct_change.toFixed(2)}%)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 4 Key Price Box -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
+                        <div class="bg-emerald-950/30 border border-emerald-500/40 p-3 rounded-xl">
+                            <span class="text-emerald-400 text-[11px] font-sans font-semibold block">🎯 ราคาซื้อที่แนะนำ (Buy Zone)</span>
+                            <span class="text-base sm:text-lg font-black text-emerald-300 block mt-1">${item.buy_zone}</span>
+                            <span class="text-[10px] text-slate-400 font-sans">กรอบรับของปลอดภัย</span>
+                        </div>
+
+                        <div class="bg-blue-950/30 border border-blue-500/40 p-3 rounded-xl">
+                            <span class="text-blue-400 text-[11px] font-sans font-semibold block">📈 เป้าหมายขายทำกำไร 1</span>
+                            <span class="text-base sm:text-lg font-black text-white block mt-1">${item.target_1.toFixed(2)} ฿</span>
+                            <span class="text-[10px] text-emerald-400 font-sans font-bold">+${item.upside_pct}% (Upside)</span>
+                        </div>
+
+                        <div class="bg-purple-950/30 border border-purple-500/40 p-3 rounded-xl">
+                            <span class="text-purple-400 text-[11px] font-sans font-semibold block">🚀 เป้าหมายรอบใหญ่ 2</span>
+                            <span class="text-base sm:text-lg font-black text-purple-300 block mt-1">${item.target_2.toFixed(2)} ฿</span>
+                            <span class="text-[10px] text-slate-400 font-sans">เป้าขยายตามโมเมนตัม</span>
+                        </div>
+
+                        <div class="bg-rose-950/30 border border-rose-500/40 p-3 rounded-xl">
+                            <span class="text-rose-400 text-[11px] font-sans font-semibold block">🛑 จุดตัดขาดทุน (Cut Loss)</span>
+                            <span class="text-base sm:text-lg font-black text-rose-400 block mt-1">${item.cut_loss.toFixed(2)} ฿</span>
+                            <span class="text-[10px] text-rose-400 font-sans font-bold">-${item.downside_pct}% (Risk)</span>
+                        </div>
+                    </div>
+
+                    <!-- Rationale & Action Summary -->
+                    <div class="bg-stream-dark p-3.5 rounded-xl border border-stream flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+                        <div class="space-y-1">
+                            <div class="flex items-center space-x-2">
+                                <span class="font-bold text-slate-200">💡 เหตุผลวิเคราะห์ AI:</span>
+                                <span class="text-slate-300 font-sans">${item.action_reason}</span>
+                            </div>
+                            <div class="flex items-center space-x-3 text-[11px] text-slate-400">
+                                <span>งบการเงิน F-Score: <b class="text-emerald-400 font-mono">${item.f_score}/9</b></span>
+                                <span>•</span>
+                                <span>ความปลอดภัย: <b class="text-white font-mono">${item.altman_zone}</b></span>
+                                <span>•</span>
+                                <span>R:R ความคุ้มค่า: <b class="text-blue-400 font-mono">${item.reward_risk.toFixed(2)} : 1</b></span>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center space-x-2">
+                            <button onclick="analyzeStock('${item.symbol}')" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-semibold transition flex items-center space-x-1.5">
+                                <span>📈</span> <span>ดูกราฟ & เจาะลึก</span>
+                            </button>
+                            <button onclick="easyQuickBuyWithSymbol('${item.symbol}', ${item.current_price}, 1000)" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition shadow-lg shadow-emerald-500/20 flex items-center space-x-1.5">
+                                <span>⚡</span> <span>ซื้อ 1,000 หุ้นทันที</span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+                container.appendChild(card);
+            });
+        }
+
+        async function easyQuickBuyWithSymbol(symbol, price, shares) {
+            const vol = shares || 1000;
+            if (!confirm(`ยืนยันส่งคำสั่งซื้อจำลองหุ้น ${symbol}\nจำนวน: ${vol.toLocaleString()} หุ้น\nราคาประมาณ: ${price.toFixed(2)} บาท\nมูลค่ารวม: ${(vol * price).toLocaleString()} บาท?`)) return;
+
+            try {
+                const res = await fetch('/api/order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        symbol: symbol,
+                        side: 'BUY',
+                        volume: vol,
+                        price: price,
+                        pin: '000000'
+                    })
+                });
+                const data = await res.json();
+                if (data.status === 'SUCCESS') {
+                    alert(`✅ ส่งคำสั่งซื้อ ${symbol} จำนวน ${vol.toLocaleString()} หุ้น สำเร็จแล้ว!\nระบบบันทึกเข้าพอร์ตเรียบร้อย`);
+                    refreshAccount();
+                } else {
+                    alert(`⚠️ ผลลัพธ์: ${data.message || 'ส่งคำสั่งเรียบร้อย'}`);
+                }
+            } catch (e) {
+                alert('เกิดข้อผิดพลาดในการส่งคำสั่ง');
+            }
         }
 
         // ============================================
