@@ -383,7 +383,6 @@ def index_html():
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SET-QuantAI: หน้าจอวิเคราะห์ & เทรดหุ้นไทย</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Prompt', sans-serif; }
@@ -620,6 +619,7 @@ def index_html():
                         <div class="flex items-center space-x-2">
                             <span class="text-base">📈</span>
                             <h3 class="font-bold text-white text-sm">กราฟราคาเทคนิคแบบอินเตอร์แอคทีฟ (TradingView Interactive Chart)</h3>
+                            <span id="tvChartStockBadge" class="text-xs bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded font-mono font-bold">SET:CPALL</span>
                             <span class="text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded font-mono">SET EXCHANGE</span>
                         </div>
                         <span class="text-xs text-slate-400">ปรับอินดิเคเตอร์, ไทม์เฟรม, และวาดเส้นเทรนด์ได้อิสระ</span>
@@ -1354,34 +1354,43 @@ def index_html():
             loadAnalyzerData(symbol);
         }
 
+        let activeTvChartSymbol = null;
+
         function renderTradingViewChart(symbol) {
             const container = document.getElementById('tradingview_chart_container');
             if (!container) return;
-            container.innerHTML = '';
 
-            const cleanSym = symbol.replace('.BK', '').toUpperCase();
-            if (typeof TradingView !== 'undefined') {
-                new TradingView.widget({
-                    "autosize": true,
-                    "symbol": "SET:" + cleanSym,
-                    "interval": "D",
-                    "timezone": "Asia/Bangkok",
-                    "theme": "dark",
-                    "style": "1",
-                    "locale": "th_TH",
-                    "toolbar_bg": "#151922",
-                    "enable_publishing": false,
-                    "allow_symbol_change": true,
-                    "container_id": "tradingview_chart_container"
-                });
-            } else {
-                container.innerHTML = '<div class="flex items-center justify-center h-full text-slate-400 font-sans">กำลังเชื่อมต่อสัญญาณกราฟ TradingView...</div>';
+            const cleanSym = (symbol || 'CPALL').replace('.BK', '').trim().toUpperCase();
+            
+            // Update badge on chart header
+            const elTvBadge = document.getElementById('tvChartStockBadge');
+            if (elTvBadge) elTvBadge.innerText = 'SET:' + cleanSym;
+
+            // Avoid unnecessary reloads if already showing this symbol
+            if (activeTvChartSymbol === cleanSym && document.getElementById('tradingview_chart_iframe')) {
+                return;
             }
+            activeTvChartSymbol = cleanSym;
+
+            const tvUrl = `https://s.tradingview.com/widgetembed/?symbol=SET%3A${encodeURIComponent(cleanSym)}&interval=D&symboledit=1&saveimage=1&toolbarbg=151922&studies=%5B%5D&theme=dark&style=1&timezone=Asia%2FBangkok&locale=th`;
+
+            container.innerHTML = `
+                <iframe 
+                    id="tradingview_chart_iframe"
+                    src="${tvUrl}" 
+                    style="width: 100%; height: 100%; border: none; min-height: 480px;"
+                    allowtransparency="true" 
+                    scrolling="no" 
+                    allowfullscreen>
+                </iframe>
+            `;
         }
 
         async function loadAnalyzerData(symbol) {
             symbol = (symbol || currentSymbol || 'CPALL').toUpperCase();
+            currentSymbol = symbol;
             refreshAccount();
+            renderTradingViewChart(symbol);
 
             try {
                 const res = await fetch(`/api/quote/${symbol}`);
