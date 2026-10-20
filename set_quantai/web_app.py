@@ -373,8 +373,25 @@ def get_orders():
     return merged
 
 
+@web_app.get("/api/bars/{symbol}")
+def get_symbol_bars(symbol: str, limit: int = 60):
+    symbol = symbol.strip().upper()
+    bars = pipeline.settrade_client.get_historical_bars(symbol, timeframe="D1", limit=limit)
+    return [
+        {
+            "time": b.timestamp.strftime("%d/%m"),
+            "open": round(b.open, 2),
+            "high": round(b.high, 2),
+            "low": round(b.low, 2),
+            "close": round(b.close, 2),
+            "volume": b.volume,
+        }
+        for b in bars
+    ]
+
+
 @web_app.get("/", response_class=HTMLResponse)
-@web_app.head("/")
+@web_app.head("/", response_class=HTMLResponse)
 def index_html():
     return """<!DOCTYPE html>
 <html lang="th">
@@ -613,20 +630,39 @@ def index_html():
                     </p>
                 </div>
 
-                <!-- Interactive TradingView Candlestick Chart (ตามที่ผู้ใช้ขอ) -->
+                <!-- Interactive Candlestick Chart with Native Canvas Engine & TradingView Link -->
                 <div class="bg-stream-panel rounded-2xl border border-stream p-4 space-y-3">
                     <div class="flex flex-wrap items-center justify-between gap-3 border-b border-stream pb-3">
                         <div class="flex items-center space-x-2">
                             <span class="text-base">📈</span>
-                            <h3 class="font-bold text-white text-sm">กราฟราคาเทคนิคแบบอินเตอร์แอคทีฟ (TradingView Interactive Chart)</h3>
-                            <span id="tvChartStockBadge" class="text-xs bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded font-mono font-bold">SET:CPALL</span>
-                            <span class="text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded font-mono">SET EXCHANGE</span>
+                            <h3 class="font-bold text-white text-sm">กราฟราคาแท่งเทียนเทคนิคอล (Candlestick Chart)</h3>
+                            <span id="tvChartStockBadge" class="text-xs bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 rounded font-mono font-bold">SET:CPALL</span>
+                            <span class="text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded font-mono">SET REAL-TIME</span>
                         </div>
-                        <span class="text-xs text-slate-400">ปรับอินดิเคเตอร์, ไทม์เฟรม, และวาดเส้นเทรนด์ได้อิสระ</span>
+                        <div class="flex flex-wrap items-center gap-3 text-xs">
+                            <span class="inline-flex items-center space-x-1.5 text-slate-300 font-mono text-[11px]">
+                                <span class="w-3 h-1 bg-amber-400 rounded-full inline-block"></span><span>MA5</span>
+                            </span>
+                            <span class="inline-flex items-center space-x-1.5 text-slate-300 font-mono text-[11px]">
+                                <span class="w-3 h-1 bg-sky-400 rounded-full inline-block"></span><span>MA20</span>
+                            </span>
+                            <span class="inline-flex items-center space-x-1.5 text-emerald-400 font-mono text-[11px]">
+                                <span class="w-3 h-0.5 border-b-2 border-dashed border-emerald-400 inline-block"></span><span>เป้าหมาย (Target)</span>
+                            </span>
+                            <span class="inline-flex items-center space-x-1.5 text-rose-400 font-mono text-[11px]">
+                                <span class="w-3 h-0.5 border-b-2 border-dashed border-rose-400 inline-block"></span><span>คัทลอส (Cut)</span>
+                            </span>
+                            <a id="tvExternalLink" href="https://th.tradingview.com/chart/?symbol=SET:CPALL" target="_blank" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg border border-slate-700 transition flex items-center space-x-1 text-[11px] font-medium">
+                                <span>🌐 ดูกราฟใหญ่ TradingView</span> <span>↗</span>
+                            </a>
+                        </div>
                     </div>
-                    <!-- Chart Frame -->
-                    <div id="tradingview_chart_container" class="w-full h-[480px] rounded-xl overflow-hidden border border-slate-800 bg-slate-950 flex items-center justify-center text-slate-500">
-                        <span>⏳ กำลังโหลดกราฟราคา TradingView...</span>
+                    <!-- Chart Frame with Canvas -->
+                    <div id="tradingview_chart_container" class="relative w-full h-[450px] rounded-xl overflow-hidden border border-slate-800 bg-slate-950">
+                        <div id="chartTooltip" class="absolute top-2 left-3 z-10 text-[11px] font-mono bg-slate-900/95 border border-slate-700 px-3 py-1.5 rounded-lg text-slate-300 pointer-events-none flex flex-wrap gap-x-3 gap-y-1 shadow-lg">
+                            <span>⏳ กำลังโหลดแท่งเทียนราคา...</span>
+                        </div>
+                        <canvas id="stockCanvas" class="w-full h-full block"></canvas>
                     </div>
                 </div>
 
@@ -1351,46 +1387,323 @@ def index_html():
             if (input) input.value = symbol;
 
             switchTab('analyzer');
-            loadAnalyzerData(symbol);
         }
 
-        let activeTvChartSymbol = null;
+        // ============================================
+        // NATIVE HIGH-PERFORMANCE CANDLESTICK CHART
+        // ============================================
+        let cachedBars = [];
+        let currentChartSymbol = '';
+        let currentTargetPrice = 0;
+        let currentStopLoss = 0;
+        let currentEntryPrice = 0;
 
-        function renderTradingViewChart(symbol) {
-            const container = document.getElementById('tradingview_chart_container');
-            if (!container) return;
-
+        async function loadAndRenderChart(symbol, targetPrice, stopLoss, currentPrice) {
             const cleanSym = (symbol || 'CPALL').replace('.BK', '').trim().toUpperCase();
-            
-            // Update badge on chart header
+            currentChartSymbol = cleanSym;
+            currentTargetPrice = targetPrice || 0;
+            currentStopLoss = stopLoss || 0;
+            currentEntryPrice = currentPrice || 0;
+
             const elTvBadge = document.getElementById('tvChartStockBadge');
             if (elTvBadge) elTvBadge.innerText = 'SET:' + cleanSym;
 
-            // Avoid unnecessary reloads if already showing this symbol
-            if (activeTvChartSymbol === cleanSym && document.getElementById('tradingview_chart_iframe')) {
-                return;
+            const elTvLink = document.getElementById('tvExternalLink');
+            if (elTvLink) elTvLink.href = `https://th.tradingview.com/chart/?symbol=SET:${cleanSym}`;
+
+            const tooltip = document.getElementById('chartTooltip');
+            if (tooltip) tooltip.innerHTML = `<span>⏳ กำลังโหลดแท่งเทียนราคา ${cleanSym}...</span>`;
+
+            try {
+                const res = await fetch(`/api/bars/${cleanSym}?limit=60`);
+                cachedBars = await res.json();
+                drawCandlestickCanvas();
+                initCanvasEvents();
+            } catch (err) {
+                console.error('Failed to load bars:', err);
+                if (tooltip) tooltip.innerHTML = `<span class="text-rose-400">เกิดข้อผิดพลาดในการโหลดแท่งเทียน ${cleanSym}</span>`;
             }
-            activeTvChartSymbol = cleanSym;
+        }
 
-            const tvUrl = `https://s.tradingview.com/widgetembed/?symbol=SET%3A${encodeURIComponent(cleanSym)}&interval=D&symboledit=1&saveimage=1&toolbarbg=151922&studies=%5B%5D&theme=dark&style=1&timezone=Asia%2FBangkok&locale=th`;
+        function drawCandlestickCanvas(hoverIdx = -1) {
+            const canvas = document.getElementById('stockCanvas');
+            if (!canvas || !cachedBars || cachedBars.length === 0) return;
 
-            container.innerHTML = `
-                <iframe 
-                    id="tradingview_chart_iframe"
-                    src="${tvUrl}" 
-                    style="width: 100%; height: 100%; border: none; min-height: 480px;"
-                    allowtransparency="true" 
-                    scrolling="no" 
-                    allowfullscreen>
-                </iframe>
-            `;
+            const container = canvas.parentElement;
+            const rect = container.getBoundingClientRect();
+            if (rect.width === 0 || rect.height === 0) return;
+
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+
+            const ctx = canvas.getContext('2d');
+            ctx.scale(dpr, dpr);
+
+            const width = rect.width;
+            const height = rect.height;
+
+            // Clear background
+            ctx.fillStyle = '#0b0e14';
+            ctx.fillRect(0, 0, width, height);
+
+            const bars = cachedBars;
+            const count = bars.length;
+
+            const paddingLeft = 14;
+            const paddingRight = 68; // for price axis
+            const paddingTop = 32;
+            const paddingBottom = 26;
+            const chartW = width - paddingLeft - paddingRight;
+            const chartH = height - paddingTop - paddingBottom;
+            const volumeH = chartH * 0.22;
+            const priceH = chartH * 0.74;
+
+            let minP = Math.min(...bars.map(b => b.low));
+            let maxP = Math.max(...bars.map(b => b.high));
+
+            if (currentTargetPrice > 0) maxP = Math.max(maxP, currentTargetPrice * 1.02);
+            if (currentStopLoss > 0) minP = Math.min(minP, currentStopLoss * 0.98);
+
+            const pRange = (maxP - minP) || 1;
+            minP -= pRange * 0.04;
+            maxP += pRange * 0.04;
+            const finalRange = maxP - minP;
+
+            const maxVol = Math.max(...bars.map(b => b.volume)) || 1;
+
+            function getY(val) {
+                return paddingTop + priceH - ((val - minP) / finalRange) * priceH;
+            }
+
+            function getVolY(vol) {
+                return paddingTop + chartH - (vol / maxVol) * volumeH;
+            }
+
+            // Draw Grid Lines & Price Labels
+            ctx.strokeStyle = '#171f2e';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([]);
+            const gridCount = 5;
+            for (let i = 0; i <= gridCount; i++) {
+                const y = paddingTop + (priceH / gridCount) * i;
+                ctx.beginPath();
+                ctx.moveTo(paddingLeft, y);
+                ctx.lineTo(width - paddingRight, y);
+                ctx.stroke();
+
+                const pVal = maxP - (finalRange / gridCount) * i;
+                ctx.fillStyle = '#64748b';
+                ctx.font = '10px JetBrains Mono, monospace';
+                ctx.textAlign = 'left';
+                ctx.fillText(pVal.toFixed(2), width - paddingRight + 6, y + 3);
+            }
+
+            // Calculate MA5 and MA20
+            const ma5 = [];
+            const ma20 = [];
+            for (let i = 0; i < count; i++) {
+                if (i >= 4) {
+                    const avg5 = bars.slice(i - 4, i + 1).reduce((s, b) => s + b.close, 0) / 5;
+                    ma5.push({ i, val: avg5 });
+                }
+                if (i >= 19) {
+                    const avg20 = bars.slice(i - 19, i + 1).reduce((s, b) => s + b.close, 0) / 20;
+                    ma20.push({ i, val: avg20 });
+                }
+            }
+
+            const step = chartW / count;
+            const barWidth = Math.max(2.5, step * 0.68);
+
+            // Draw Key Levels: Target Price Line
+            if (currentTargetPrice > 0) {
+                const yT = getY(currentTargetPrice);
+                ctx.strokeStyle = '#10B981';
+                ctx.lineWidth = 1.2;
+                ctx.setLineDash([4, 4]);
+                ctx.beginPath();
+                ctx.moveTo(paddingLeft, yT);
+                ctx.lineTo(width - paddingRight, yT);
+                ctx.stroke();
+                ctx.fillStyle = '#10B981';
+                ctx.font = 'bold 9px JetBrains Mono, monospace';
+                ctx.fillText(`🎯 ${currentTargetPrice.toFixed(2)}`, width - paddingRight + 4, yT + 3);
+            }
+
+            // Draw Key Levels: Stop Loss Line
+            if (currentStopLoss > 0) {
+                const yS = getY(currentStopLoss);
+                ctx.strokeStyle = '#F43F5E';
+                ctx.lineWidth = 1.2;
+                ctx.setLineDash([4, 4]);
+                ctx.beginPath();
+                ctx.moveTo(paddingLeft, yS);
+                ctx.lineTo(width - paddingRight, yS);
+                ctx.stroke();
+                ctx.fillStyle = '#F43F5E';
+                ctx.font = 'bold 9px JetBrains Mono, monospace';
+                ctx.fillText(`🛑 ${currentStopLoss.toFixed(2)}`, width - paddingRight + 4, yS + 3);
+            }
+
+            // Draw Key Levels: Entry / Current Price Line
+            if (currentEntryPrice > 0) {
+                const yE = getY(currentEntryPrice);
+                ctx.strokeStyle = '#38BDF8';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([2, 3]);
+                ctx.beginPath();
+                ctx.moveTo(paddingLeft, yE);
+                ctx.lineTo(width - paddingRight, yE);
+                ctx.stroke();
+                ctx.fillStyle = '#38BDF8';
+                ctx.font = 'bold 9px JetBrains Mono, monospace';
+                ctx.fillText(`💵 ${currentEntryPrice.toFixed(2)}`, width - paddingRight + 4, yE + 3);
+            }
+
+            ctx.setLineDash([]);
+
+            // Draw Candlesticks & Volume Bars
+            bars.forEach((b, idx) => {
+                const cx = paddingLeft + (idx + 0.5) * step;
+                const isUp = b.close >= b.open;
+                const color = isUp ? '#00E676' : '#FF5252';
+
+                // Volume Bar
+                const volY = getVolY(b.volume);
+                ctx.fillStyle = isUp ? 'rgba(0, 230, 118, 0.3)' : 'rgba(255, 82, 82, 0.3)';
+                ctx.fillRect(cx - barWidth / 2, volY, barWidth, (paddingTop + chartH) - volY);
+
+                // Candlestick Wick
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 1.2;
+                ctx.beginPath();
+                ctx.moveTo(cx, getY(b.high));
+                ctx.lineTo(cx, getY(b.low));
+                ctx.stroke();
+
+                // Candlestick Body
+                const yOpen = getY(b.open);
+                const yClose = getY(b.close);
+                const bodyY = Math.min(yOpen, yClose);
+                const bodyH = Math.max(1.8, Math.abs(yClose - yOpen));
+
+                ctx.fillStyle = color;
+                ctx.fillRect(cx - barWidth / 2, bodyY, barWidth, bodyH);
+
+                // Date Label
+                if (idx % 10 === 0 || idx === count - 1) {
+                    ctx.fillStyle = '#64748b';
+                    ctx.font = '9px JetBrains Mono, monospace';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(b.time, cx, height - 8);
+                }
+            });
+
+            // Draw MA5 Line (Amber)
+            if (ma5.length > 1) {
+                ctx.strokeStyle = '#FBBF24';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ma5.forEach((pt, k) => {
+                    const cx = paddingLeft + (pt.i + 0.5) * step;
+                    const cy = getY(pt.val);
+                    if (k === 0) ctx.moveTo(cx, cy);
+                    else ctx.lineTo(cx, cy);
+                });
+                ctx.stroke();
+            }
+
+            // Draw MA20 Line (Sky Blue)
+            if (ma20.length > 1) {
+                ctx.strokeStyle = '#38BDF8';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ma20.forEach((pt, k) => {
+                    const cx = paddingLeft + (pt.i + 0.5) * step;
+                    const cy = getY(pt.val);
+                    if (k === 0) ctx.moveTo(cx, cy);
+                    else ctx.lineTo(cx, cy);
+                });
+                ctx.stroke();
+            }
+
+            // Crosshair & Tooltip
+            const activeIdx = (hoverIdx >= 0 && hoverIdx < count) ? hoverIdx : count - 1;
+            const activeBar = bars[activeIdx];
+
+            if (hoverIdx >= 0 && hoverIdx < count) {
+                const hx = paddingLeft + (hoverIdx + 0.5) * step;
+                const hy = getY(activeBar.close);
+
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+                ctx.lineWidth = 0.8;
+                ctx.setLineDash([3, 3]);
+
+                // Vertical Crosshair
+                ctx.beginPath();
+                ctx.moveTo(hx, paddingTop);
+                ctx.lineTo(hx, paddingTop + chartH);
+                ctx.stroke();
+
+                // Horizontal Crosshair
+                ctx.beginPath();
+                ctx.moveTo(paddingLeft, hy);
+                ctx.lineTo(width - paddingRight, hy);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+
+            // Update Tooltip DOM
+            const isUp = activeBar.close >= activeBar.open;
+            const colorClass = isUp ? 'text-emerald-400' : 'text-rose-400';
+            const diff = activeBar.close - activeBar.open;
+            const pct = ((diff / activeBar.open) * 100).toFixed(2);
+            const sign = diff >= 0 ? '+' : '';
+
+            const tooltip = document.getElementById('chartTooltip');
+            if (tooltip) {
+                tooltip.innerHTML = `
+                    <span class="text-white font-bold">${currentChartSymbol} (${activeBar.time})</span>
+                    <span>O: <b class="text-slate-200">${activeBar.open.toFixed(2)}</b></span>
+                    <span>H: <b class="text-slate-200">${activeBar.high.toFixed(2)}</b></span>
+                    <span>L: <b class="text-slate-200">${activeBar.low.toFixed(2)}</b></span>
+                    <span>C: <b class="${colorClass}">${activeBar.close.toFixed(2)} (${sign}${pct}%)</b></span>
+                    <span>Vol: <b class="text-amber-300">${(activeBar.volume / 1000000).toFixed(2)}M</b></span>
+                `;
+            }
+        }
+
+        function initCanvasEvents() {
+            const canvas = document.getElementById('stockCanvas');
+            if (!canvas || canvas._hasEvents) return;
+            canvas._hasEvents = true;
+
+            function handleMove(e) {
+                if (!cachedBars || cachedBars.length === 0) return;
+                const rect = canvas.getBoundingClientRect();
+                const mouseX = (e.clientX || (e.touches && e.touches[0].clientX)) - rect.left;
+                const paddingLeft = 14;
+                const paddingRight = 68;
+                const chartW = rect.width - paddingLeft - paddingRight;
+                const step = chartW / cachedBars.length;
+                const idx = Math.floor((mouseX - paddingLeft) / step);
+                drawCandlestickCanvas(idx);
+            }
+
+            canvas.addEventListener('mousemove', handleMove);
+            canvas.addEventListener('touchmove', handleMove, { passive: true });
+            canvas.addEventListener('mouseleave', () => drawCandlestickCanvas(-1));
+            window.addEventListener('resize', () => drawCandlestickCanvas(-1));
         }
 
         async function loadAnalyzerData(symbol) {
             symbol = (symbol || currentSymbol || 'CPALL').toUpperCase();
             currentSymbol = symbol;
             refreshAccount();
-            renderTradingViewChart(symbol);
+
+            // Pre-load chart with symbol immediately
+            loadAndRenderChart(symbol);
 
             try {
                 const res = await fetch(`/api/quote/${symbol}`);
@@ -1398,6 +1711,9 @@ def index_html():
 
                 currentSymbol = data.symbol;
                 cachedAiShares = data.analysis.recommended_shares || 1000;
+
+                // Refresh chart with exact target & stoploss from AI analysis
+                loadAndRenderChart(data.symbol, data.analysis.target_price, data.analysis.stop_loss, data.last);
 
                 // Header Badges
                 const elBadge = document.getElementById('easySymbolBadge');
@@ -1489,9 +1805,6 @@ def index_html():
                 if (elShares) elShares.innerText = `${(data.analysis.recommended_shares || 1000).toLocaleString()} หุ้น`;
                 const elTradeVal = document.getElementById('easyTradeValText');
                 if (elTradeVal) elTradeVal.innerText = `${(data.analysis.trade_value || 0).toLocaleString()} ฿`;
-
-                // Render TradingView Chart
-                renderTradingViewChart(data.symbol);
 
                 // Sync Order Pad inputs
                 const ordSym = document.getElementById('orderSymbol');
@@ -2061,9 +2374,15 @@ def index_html():
                             <button onclick="analyzeStock('${item.symbol}')" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-semibold transition flex items-center space-x-1.5">
                                 <span>📈</span> <span>ดูกราฟ & เจาะลึก</span>
                             </button>
-                            <button onclick="easyQuickBuyWithSymbol('${item.symbol}', ${item.current_price}, 1000)" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition shadow-lg shadow-emerald-500/20 flex items-center space-x-1.5">
-                                <span>⚡</span> <span>ซื้อ 1,000 หุ้นทันที</span>
+                            ${item.action === 'SELL' ? `
+                            <button onclick="executeActionWithSymbol('${item.symbol}', 'SELL', ${item.current_price}, 1000)" class="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-xs font-bold transition shadow-lg shadow-rose-600/20 flex items-center space-x-1.5">
+                                <span>🔻</span> <span>ขายทำกำไร 1,000 หุ้น</span>
                             </button>
+                            ` : `
+                            <button onclick="executeActionWithSymbol('${item.symbol}', 'BUY', ${item.current_price}, 1000)" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition shadow-lg shadow-emerald-500/20 flex items-center space-x-1.5">
+                                <span>⚡</span> <span>ซื้อสะสม 1,000 หุ้น</span>
+                            </button>
+                            `}
                         </div>
                     </div>
                 `;
@@ -2072,9 +2391,10 @@ def index_html():
             });
         }
 
-        async function easyQuickBuyWithSymbol(symbol, price, shares) {
+        async function executeActionWithSymbol(symbol, side, price, shares) {
             const vol = shares || 1000;
-            if (!confirm(`ยืนยันส่งคำสั่งซื้อจำลองหุ้น ${symbol}\nจำนวน: ${vol.toLocaleString()} หุ้น\nราคาประมาณ: ${price.toFixed(2)} บาท\nมูลค่ารวม: ${(vol * price).toLocaleString()} บาท?`)) return;
+            const sideTh = side === 'SELL' ? 'ขาย' : 'ซื้อ';
+            if (!confirm(`ยืนยันส่งคำสั่ง${sideTh}จำลองหุ้น ${symbol}\nจำนวน: ${vol.toLocaleString()} หุ้น\nราคาประมาณ: ${price.toFixed(2)} บาท\nมูลค่ารวม: ${(vol * price).toLocaleString()} บาท?`)) return;
 
             try {
                 const res = await fetch('/api/order', {
@@ -2082,7 +2402,7 @@ def index_html():
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         symbol: symbol,
-                        side: 'BUY',
+                        side: side,
                         volume: vol,
                         price: price,
                         pin: '000000'
@@ -2090,7 +2410,7 @@ def index_html():
                 });
                 const data = await res.json();
                 if (data.status === 'SUCCESS') {
-                    alert(`✅ ส่งคำสั่งซื้อ ${symbol} จำนวน ${vol.toLocaleString()} หุ้น สำเร็จแล้ว!\nระบบบันทึกเข้าพอร์ตเรียบร้อย`);
+                    alert(`✅ ส่งคำสั่ง${sideTh} ${symbol} จำนวน ${vol.toLocaleString()} หุ้น สำเร็จแล้ว!\nระบบบันทึกเข้าพอร์ตเรียบร้อย`);
                     refreshAccount();
                 } else {
                     alert(`⚠️ ผลลัพธ์: ${data.message || 'ส่งคำสั่งเรียบร้อย'}`);
@@ -2099,6 +2419,7 @@ def index_html():
                 alert('เกิดข้อผิดพลาดในการส่งคำสั่ง');
             }
         }
+        window.easyQuickBuyWithSymbol = (sym, price, shares) => executeActionWithSymbol(sym, 'BUY', price, shares);
 
         // ============================================
         // ACCURACY & PERFORMANCE DASHBOARD LOGIC
