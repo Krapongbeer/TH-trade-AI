@@ -80,7 +80,9 @@ orders_history: List[Dict[str, Any]] = [
 
 
 @web_app.get("/health")
+@web_app.head("/health")
 @web_app.get("/healthz")
+@web_app.head("/healthz")
 def healthcheck():
     return {"status": "ok"}
 
@@ -345,6 +347,7 @@ def get_orders():
 
 
 @web_app.get("/", response_class=HTMLResponse)
+@web_app.head("/")
 def index_html():
     return """<!DOCTYPE html>
 <html lang="th">
