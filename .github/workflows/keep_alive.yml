@@ -1,0 +1,17 @@
+name: Keep Render Alive 24/7
+
+on:
+  schedule:
+    # Ping every 10 minutes to prevent Render free instance from sleeping
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Service Health
+        run: |
+          echo "Pinging SET-QuantAI on Render..."
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -m 45 https://th-trade-ai.onrender.com/health || echo "TIMEOUT")
+          echo "Render Healthcheck Response: $HTTP_STATUS"

@@ -10,6 +10,10 @@ A modern, highly intuitive Web UI inspired by Settrade Streaming:
   4. Order Status / History (Track matched/pending sandbox orders)
 """
 
+import os
+import threading
+import time
+import requests
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
@@ -23,6 +27,24 @@ from set_quantai.core.auto_trader import AutoTraderEngine
 
 web_app = FastAPI(title="SET-QuantAI Streaming Terminal", description="หน้าจอเทรดและวิเคราะห์หุ้นไทยสไตล์ Settrade Streaming")
 pipeline = QuantAIPipeline()
+
+# Automatic background pinger to keep Render free tier awake 24/7
+def _start_keep_alive():
+    def _loop():
+        time.sleep(60)  # Wait 1 minute after server starts
+        render_url = os.environ.get("RENDER_EXTERNAL_URL", "https://th-trade-ai.onrender.com")
+        target_url = f"{render_url.rstrip('/')}/health"
+        while True:
+            try:
+                time.sleep(600)  # Ping every 10 mins (Render sleeps at 15 mins)
+                requests.get(target_url, timeout=15)
+            except Exception:
+                pass
+
+    t = threading.Thread(target=_loop, daemon=True)
+    t.start()
+
+_start_keep_alive()
 
 # In-memory orders history for Sandbox execution
 orders_history: List[Dict[str, Any]] = [
